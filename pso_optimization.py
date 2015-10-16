@@ -13,8 +13,8 @@ default_parameters={
   'S':10,                #number of particles
   'dimensions':6,                 #number of dimensions
   'maxiter':100, #1000   #maximum number of iterations
-  'w0':0.9,              #initial weight
-  'wf':0.1,              #final weight
+  'w0':0.9,              #initial inertia coefficient (weight)
+  'wf':0.1,              #final inertia coefficient (weight)
   'c1':2,                #cognitive coefficient
   'c2':2,                #social coefficient
   'max_v':5,             #maximum velocity
@@ -88,15 +88,16 @@ def pso(f,parameters):
   #print(best)
   return(bestfitness)
 
-'''
+#'''
 #quick test:
-#bestfitness=pso(fitnessfunctions.ackley_m,
-#                {'x_min':-32,
-#                'x_max':32,
-#                'dimensions':6,
-#                'S':30,
-#                'maxiter':1000,
-#                'target_cost':-1})
+bestfitness=pso(fitnessfunctions.ackley_m,
+                {'x_min':-32,
+                'x_max':32,
+                'dimensions':6,
+                'S':30,
+                'maxiter':1000,
+                'target_cost':-1})
+
 #bestfitness=pso(fitnessfunctions.michalewicz_m,
 #                {'x_min':0,
 #                'x_max':np.pi,
@@ -105,13 +106,13 @@ def pso(f,parameters):
 #                'maxiter':1000,
 #                'target_cost':-10})
                 
-bestfitness=pso(fitnessfunctions.schwefel_m,
-                {'x_min':-500,
-                'x_max':500,
-                'dimensions':6,
-                'S':30,
-                'maxiter':1000,
-                'target_cost':0.01})
+#bestfitness=pso(fitnessfunctions.schwefel_m,
+#                {'x_min':-500,
+#                'x_max':500,
+#                'dimensions':6,
+#                'S':30,
+#                'maxiter':1000,
+#                'target_cost':0.01})
                 
 #bestfitness=pso(fitnessfunctions.rosenbrock_m,
 #                {'x_min':-8,
