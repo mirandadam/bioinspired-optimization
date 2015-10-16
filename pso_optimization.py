@@ -46,7 +46,9 @@ def pso(f,parameters):
   y=np.ones((S,dimensions),dtype='float64')*1e10
   v=np.ones((S,dimensions),dtype='float64')*ini_v
   f_ind=np.ones(S,dtype='float64')*1e10 # initialize best local fitness 
-  bestfitness=[]
+  cost_history=[]
+  X_history=[]
+  
 
   w= w0 #current weight
   slope = (wf-w0)/maxiter #increment that will take w from w0 to wf in the specified number of iteractions
@@ -61,7 +63,8 @@ def pso(f,parameters):
     y[aux]=x[aux]
     best=np.min(f_ind)
     aux=np.where(f_ind==best)[0][0]
-    bestfitness.append(best)
+    cost_history.append(best)
+    X_history.append(x.copy())
     ys=y[aux]
     
     #test if target cost was reached:
@@ -86,19 +89,24 @@ def pso(f,parameters):
 
   #print(ys)
   #print(best)
-  return(bestfitness)
+  return(cost_history,X_history)
 
 #'''
 #quick test:
-bestfitness=pso(fitnessfunctions.ackley_m,
+cost_history,X_history=pso(fitnessfunctions.ackley_m,
                 {'x_min':-32,
                 'x_max':32,
-                'dimensions':6,
+                'dimensions':2,
                 'S':30,
                 'maxiter':1000,
                 'target_cost':-1})
+N=2
+f=fitnessfunctions.ackley_m
+l=-32
+u=32
+S=30
 
-#bestfitness=pso(fitnessfunctions.michalewicz_m,
+#cost_history=pso(fitnessfunctions.michalewicz_m,
 #                {'x_min':0,
 #                'x_max':np.pi,
 #                'dimensions':6,
@@ -106,7 +114,7 @@ bestfitness=pso(fitnessfunctions.ackley_m,
 #                'maxiter':1000,
 #                'target_cost':-10})
                 
-#bestfitness=pso(fitnessfunctions.schwefel_m,
+#cost_history=pso(fitnessfunctions.schwefel_m,
 #                {'x_min':-500,
 #                'x_max':500,
 #                'dimensions':6,
@@ -114,28 +122,62 @@ bestfitness=pso(fitnessfunctions.ackley_m,
 #                'maxiter':1000,
 #                'target_cost':0.01})
                 
-#bestfitness=pso(fitnessfunctions.rosenbrock_m,
+#cost_history=pso(fitnessfunctions.rosenbrock_m,
 #                {'x_min':-8,
 #                'x_max':8,
 #                'dimensions':6,
 #                'S':30,
 #                'maxiter':10000})
 
-import numpy
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
+from matplotlib import animation
 from mpl_toolkits.mplot3d import axes3d
-
-
+from matplotlib import cm
 
 fig = plt.figure()
 ax1=fig.add_subplot(211)
-ax1.plot(bestfitness)
+ax1.plot(cost_history)
 ax1.set_ylabel("$mincost$")
-if(np.min(bestfitness)>0):
+if(np.min(cost_history)>0):
   ax2=fig.add_subplot(212)
-  ax2.plot(np.log10(bestfitness))
+  ax2.plot(np.log10(cost_history))
   ax2.set_ylabel("$log_{10}(mincost)$")
   ax2.set_xlabel("$iteration$")
+plt.show()
+
+
+if(N==2):
+  fig_a=plt.figure()
+  ax=fig_a.add_subplot(111,projection='3d')
+  nsamples=200
+  x0=np.linspace(l,u,nsamples+1)
+  x1=np.linspace(l,u,nsamples+1)
+  X0,X1=np.meshgrid(x0,x1)
+  X=np.array([X0.ravel(),X1.ravel()]).transpose()
+  Z0=f(X).reshape(X0.shape)
+  zmin=np.min(Z0)
+  zmax=np.max(Z0)
+  #ax.plot_surface(X0,X1,Z0,cmap=cm.jet,linewidth=0,rstride=1,cstride=1,antialiased=True)
+  ax.contour(X0, X1, Z0, zdir='z', offset=zmin-0.0*(zmax-zmin), cmap=cm.coolwarm)
+  
+  s0=ax.scatter(X_history[0][:,0],X_history[0][:,1],f(X_history[0])+(u-l)/100,color='g')
+  s1=ax.scatter(X_history[0][:,0],X_history[0][:,1],np.zeros(S),color='b')
+  
+  def update_position(num,data,plots,f):
+    #s0,s1=plots
+    s0,s1=plots
+    hx=data
+    s0._offsets3d=[hx[num][:,0],hx[num][:,1],f(hx[num])+(u-l)/100]
+    s1._offsets3d=[hx[num][:,0],hx[num][:,1],np.zeros(len(hx[num]))]
+    print(num)
+  
+  
+  an = animation.FuncAnimation(fig_a,
+                               update_position,
+                               frames=len(X_history),
+                               interval=100,
+                               fargs=(X_history,(s0,s1),f)
+                               )
 plt.show()
 
 #'''

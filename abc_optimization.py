@@ -139,8 +139,8 @@ def abc(f=fitnessfunctions.rosenbrock_m, parameters=default_parameters):
     if(trials[aux]>abandon_threshold):
       new_food=np.random.rand(dimensions)*(ub-lb)+lb
       new_cost=f(np.array([new_food]))[0]
-      if(new_cost<food_costs[aux]): #fix for scout bees destroying the global minimum
-      #if(True):
+      #if(new_cost<food_costs[aux]): #fix for scout bees destroying the global minimum
+      if(True):
         foods[aux]=new_food.copy()
         food_costs[aux]=new_cost
         #print('Scount replaced food source',aux)

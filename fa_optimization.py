@@ -123,17 +123,18 @@ def fa(f=fitnessfunctions.rosenbrock_m, parameters=default_parameters):
   
   return X_history,cost_history
 
-'''
+#'''
 #quick test:
 #f,u,l=fitnessfunctions.sphere_m,8,-8
 #f,u,l=fitnessfunctions.schwefel_m,500,-500
-f,u,l=fitnessfunctions.rastrigin_m,8,-8
-#f,u,l=fitnessfunctions.ackley_m,32,-32
+#f,u,l=fitnessfunctions.rastrigin_m,8,-8
+f,u,l=fitnessfunctions.ackley_m,32,-32
+#f,u,l=fitnessfunctions.michalewicz_m,np.pi,0
 
-N=6
+N=2
 S=20
 X_history,cost_history=fa( f,
-                 {'target_cost':-1,
+                 {'target_cost':-10000,
                   'maxiter':1000,
                   'N':N,
                   'S':S,
