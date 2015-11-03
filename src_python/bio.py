@@ -19,32 +19,38 @@ import numpy as np
 import fitnessfunctions #needed for testing.
 
 class Optimizer:
+  '''
   #problem variables:
   costfunction=None      #the cost function to evaluate
   dimensions=None        #number of dimensions
   maxiter=500            #maximum number of iterations
   target_cost=None       #stopping criterion for cost
   lb=None                #range domain for fitness function - lower bound for each dimension
-  um=None                #range domain for fitness function - upper bound for each dimension
+  ub=None                #range domain for fitness function - upper bound for each dimension
   
   #state variables:
   _X=None       #current particle solutions
   _Y=None       #current particle cost
   _bestidx=None #index of best particle in X
-  _xbest=None   #solution of best particle in X
-  _ybest=None   #cost of best particle in X
+  _bestx=None   #solution of best particle in X
+  _besty=None   #cost of best particle in X
   _iter=None    #current iteration
+  '''
   
   def run(self):
     """
       Iterate the algorithm until a stop condition is met.
       Returns the final cost and the final solution found.
     """
-    while(self._iter<self.maxiter and
-          (self.target_cost is None or self._ybest > self.target_cost) ):
-      self.iterate_one()
-      self._iter+=1
-    return (self._ybest,self._xbest)
+    s=self
+    while(s._iter<s.maxiter and
+          (s.target_cost is None or s._ybest > s.target_cost) ):
+      i=s._iter
+      s.iterate_one()
+      #protect against s.iterate_one incrementing the s._iter counter:
+      if(s._iter==i):
+        s._iter+=1
+    return (s._besty,s._bestx)
     
   def run_with_history(self):
     """
@@ -53,8 +59,22 @@ class Optimizer:
       Returns the cost history and the solution history of each iteration in
        chronological order
     """
+    s=self
+    x_history=[]
+    y_history=[]
+    while(s._iter<s.maxiter and
+          (s.target_cost is None or s._ybest > s.target_cost) ):
+      i=s._iter
+      s.iterate_one()
+      x_history.append(s._xbest)
+      y_history.append(s._ybest)
+      #protect against s.iterate_one incrementing the s._iter counter:
+      if(s._iter==i):
+        s._iter+=1
+    return (s._ybest,s._xbest)
 
 class PSO(Optimizer):
+  name='PSO'
   #algorithm tuning:
   n=10                   #number of particles
   w0=0.9                 #initial inertia coefficient (weight)
@@ -63,8 +83,11 @@ class PSO(Optimizer):
   c2=2                   #social coefficient
   max_v=5                #maximum velocity
   ini_v=max_v/10 #max_v/10 #initial velocity
+  
+  #state variables:
+  _iter=0
 
-  def init(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
+  def __init__(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
            n=10,w0=0.9,wf=0.1,c1=2,c2=2,max_v=5,ini_v=5/10):
     """
     The cost function has to take arrays with (m,n) shape as inputs, where
@@ -72,64 +95,93 @@ class PSO(Optimizer):
     lb is the lower bound for each dimension
     ub is the upper bound for each dimension
     """
+    s=self
     #TODO: do some serious input checking here.
     
     #problem parameters:
-    self.costfunction=costfunction
-    self.dimensions=dimensions
-    self.lb=lb.copy()
-    self.ub=ub.copy()
-    self.maxiter=maxiter
-    self.target_cost=target_cost
+    s.costfunction=costfunction
+    s.dimensions=dimensions
+    s.lb=lb.copy()
+    s.ub=ub.copy()
+    s.maxiter=maxiter
+    s.target_cost=target_cost
     
     #algorithm tuning:
-    self.n=n
-    self.w0=w0
-    self.wf=wf
-    self.c1=c1
-    self.c2=c2
-    self.max_v=max_v
-    self.ini_v=ini_v
+    s.n=n
+    s.w0=w0
+    s.wf=wf
+    s.c1=c1
+    s.c2=c2
+    s.max_v=max_v
+    s.ini_v=ini_v
     
     #initial conditions:
-    self._X = np.random.random((n,dimensions))*(ub-lb)+lb # current particle solutions
-    self._Y = self.costfunction(self._X)                  # current particle cost
-    self._V = np.ones((n,dimensions))*ini_v               # current particle speeds
+    s._X = np.random.random((n,dimensions))*(ub-lb)+lb # current particle solutions
+    s._Y = s.costfunction(s._X)                  # current particle cost
+    s._V = np.ones((n,dimensions))*ini_v               # current particle speeds
     
-    self._Xmemory=self._X.copy()              # memory of best individual solution
-    self._Ymemory=self._Y.copy()              # memory of best individual fitness
-    self._bestidx=np.argmin(self.__Ymemory)         # index of best particle in Xmemory
-    self._bestx=self._Xmemory[self._bestidx].copy() # solution of best particle in Xmemory
-    self._besty=self._Ymemory[self._bestidx]        # cost of best particle in Xmemory
+    s._Xmemory=s._X.copy()              # memory of best individual solution
+    s._Ymemory=s._Y.copy()              # memory of best individual fitness
+    s._bestidx=np.argmin(s._Ymemory)         # index of best particle in Xmemory
+    s._bestx=s._Xmemory[s._bestidx].copy() # solution of best particle in Xmemory
+    s._besty=s._Ymemory[s._bestidx]        # cost of best particle in Xmemory
     
-    self._iter=0
+    s._iter=0
 
   def iterate_one(self):
+    s=self
     #calculating inertia weight:
-    w=self.w0+self._iter*(self.wf-self.w0)/self.maxiter
+    w=s.w0+s._iter*(s.wf-s.w0)/s.maxiter
 
     #particle movement:
-    r1=np.random.random((self.n,self.dimensions))
-    r2=np.random.random((self.n,self.dimensions))
-    self._V= w*self._V + self.c1*r1*(self._Xmemory-self._X) + self.c2*r2*(self._bestx-self._X)
+    r1=np.random.random((s.n,s.dimensions))
+    r2=np.random.random((s.n,s.dimensions))
+    s._V= w*s._V + s.c1*r1*(s._Xmemory-s._X) + s.c2*r2*(s._bestx-s._X)
 
     #applying speed limit:
-    vnorm=((self._V**2).sum(axis=1))**0.5 #norm of the speed
-    aux=np.where(vnorm>self.max_v) #particles with velocity greater than expected
-    self._V[aux]=self._V[aux]*max_v/vnorm[aux] #clipping the speed to the maximum speed
+    vnorm=((s._V**2).sum(axis=1))**0.5 #norm of the speed
+    aux=np.where(vnorm>s.max_v) #particles with velocity greater than expected
+    s._V[aux]=s._V[aux]*s.max_v/(vnorm[aux].reshape((-1,1))) #clipping the speed to the maximum speed
 
     #update solutions:
-    self._X=self._X+self._V
+    s._X=s._X+s._V
 
     #fitness value calculation:
-    self._Y = self.costfunction(self._X)  # current particle cost
+    s._Y = s.costfunction(s._X)  # current particle cost
     
     #update memories:
-    aux=np.where(self._Y<self._Ymemory)
-    self._Xmemory[aux]=self._X[aux].copy()           # memory of best individual solution
-    self._Ymemory[aux]=self._Y[aux].copy()           # memory of best individual fitness
-    self._bestidx=np.argmin(self._Ymemory)           # index of best particle in Xmemory
-    self._bestx=self._Xmemory[self._bestidx].copy()  # solution of best particle in Xmemory
-    self._besty=self._Ymemory[self._bestidx]         # cost of best particle in Xmemory
+    aux=np.where(s._Y<s._Ymemory)
+    s._Xmemory[aux]=s._X[aux].copy()           # memory of best individual solution
+    s._Ymemory[aux]=s._Y[aux].copy()           # memory of best individual fitness
+    s._bestidx=np.argmin(s._Ymemory)           # index of best particle in Xmemory
+    s._bestx=s._Xmemory[s._bestidx].copy()  # solution of best particle in Xmemory
+    s._besty=s._Ymemory[s._bestidx]         # cost of best particle in Xmemory
     return
 
+all_algorithms={i[0]:i[1] for i in vars().copy().items() if 
+                hasattr(i[1],'iterate_one') and
+                hasattr(i[1],'run') and
+                hasattr(i[1],'run_with_history')}
+
+def test(algo,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
+  #TODO: check the fitnessfunction test and see if there are any tests that can be applied here
+  #TODO: do a lot more tests
+  #TODO: check if the name attribute is the same as the name of the class.
+  f=Fitnessfunc.evaluate
+  lb,ub=Fitnessfunc.default_bounds(dimensions)
+  ymin,xmin=Fitnessfunc.default_minimum(dimensions)
+  a=algo(f,dimensions,lb,ub,**kwargs)
+  y,x=a.run()
+  cost_delta=((y-ymin)**2).sum()**0.5
+  solution_delta=((x-xmin)**2).sum()**0.5
+  print('cost difference to ideal:     ',cost_delta)
+  print('solution difference to ideal: ',solution_delta)
+  print('converged within tolerance?   ',cost_delta<tolerance)
+  print('Solution found:\n',x)
+  print('Theoretical best solution possible:\n',xmin)
+  print('cost achieved:\n',y)
+  print('Theoretical best cost:\n',ymin)
+  
+c=fitnessfunctions.Sphere
+ndim=20
+test(PSO,c,ndim,maxiter=1000)

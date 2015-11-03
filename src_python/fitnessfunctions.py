@@ -18,7 +18,7 @@
 import abc
 import numpy as np
 from scipy.optimize import minimize
-from time import time
+from time import time #used for testing
 
 
 class FitnessFunction:
@@ -75,20 +75,8 @@ class FitnessFunction:
     return
 
 
-class Blank(FitnessFunction):
-  def evaluate(X):
-    m,n=X.shape
-    return
-  def evaluate_single(x):
-    n,=x.shape
-    return
-  def default_minimum(ndim):
-    return
-  def default_bounds(ndim):
-    return
-
-
 class Sphere(FitnessFunction):
+  name='Sphere'
   def evaluate(X):
     m,n=X.shape
     return np.sum(X*X,axis=1)
@@ -102,6 +90,7 @@ class Sphere(FitnessFunction):
 
 
 class Quadric(FitnessFunction):
+  name='Quadric'
   def evaluate(X):
     m,n=X.shape
     temp=[ np.sum(X[:,:i+1],axis=1)**2 for i in range(n)]
@@ -116,6 +105,7 @@ class Quadric(FitnessFunction):
 
 
 class Rastrigin(FitnessFunction):
+  name='Rastrigin'
   def evaluate(X):
     m,n=X.shape
     temp=X**2-10*np.cos(2*np.pi*X)+10
@@ -131,6 +121,7 @@ class Rastrigin(FitnessFunction):
 
 class Rosenbrock(FitnessFunction):
   """ https://en.wikipedia.org/wiki/Rosenbrock_function """
+  name='Rosenbrock'
   def evaluate(X):
     m,n=X.shape
     assert(n%2==0)
@@ -151,6 +142,7 @@ class Schwefel(FitnessFunction):
   http://www-optima.amp.i.kyoto-u.ac.jp/member/student/hedar/Hedar_files/TestGO_files/Page2530.htm
   http://www.aridolan.com/ofiles/ga/gaa/Schwefel.aspx
   """
+  name='Schwefel'
   def evaluate(X):
     m,n=X.shape
     temp=X*np.sin(np.abs(X)**0.5)
@@ -177,6 +169,7 @@ class Schwefel(FitnessFunction):
 
   
 class Ackley(FitnessFunction):
+  name='Ackley'
   def evaluate(X):
     m,n=X.shape
     return -20*(np.exp(-0.2*((1/n)*np.sum(X*X,axis=1))**0.5)) - np.exp((1/n)*np.sum(np.cos(2*np.pi*X),axis=1))+20+np.e
@@ -188,19 +181,9 @@ class Ackley(FitnessFunction):
   def default_bounds(ndim):
     return (np.zeros(ndim)-32., np.zeros(ndim)+32)
   
-def michalewicz(x):
-  #suggested interval: [0, pi]
-  m=10
-  return -np.sum([ np.sin(x[i])*np.sin((i+1)*(x[i]**2)/np.pi)**(2*m) for i in range(len(x))]);
-  
-def michalewicz_m(X):
-  #suggested interval: [0, pi]
-  N=X.shape[1]
-  m=10
-  temp=[ np.sin(X[:,i])*np.sin((i+1)*(X[:,i]**2)/np.pi)**(2*m) for i in range(N)]
-  return -np.sum(temp,axis=0);
 
 class Michalewicz(FitnessFunction):
+  name='Michalewicz'
   def evaluate(X):
     m,n=X.shape
     m_number=10
@@ -256,6 +239,8 @@ def test(c,dims,nsamples,tol):
   assert(hasattr(c,'evaluate_single'))
   assert(hasattr(c,'default_bounds'))
   assert(hasattr(c,'default_minimum'))
+  assert(hasattr(c,'name'))
+  #TODO: test if name is the same as the class name. Use it to report results
   t=time()
   for n in dims:
     #checking for sanity in the number of dimensions:
@@ -302,11 +287,10 @@ all_functions={i[0]:i[1] for i in vars().copy().items() if
                 hasattr(i[1],'evaluate_single') and
                 hasattr(i[1],'default_bounds') and
                 hasattr(i[1],'default_minimum') and
-                i[0]!='Blank' and
                 i[0]!='FitnessFunction'}
 
 def test_all():
-  """ Test for all FitnessFunction classes except the Blank and FitnessFunction classes. """
+  """ Test for all FitnessFunction classes except the FitnessFunction classe. """
   v=all_functions.copy()
   for i in v.keys():
     maxdim=10
