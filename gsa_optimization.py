@@ -20,17 +20,17 @@ import fitnessfunctions
 
 
 #a) search space identification
-#f,u,l=fitnessfunctions.rosenbrock_m,8,-8
+f,u,l=fitnessfunctions.rosenbrock_m,8,-8
 #f,u,l=fitnessfunctions.sphere_m,8,-8
 #f,u,l=fitnessfunctions.quadric_m,8,-8
-f,u,l=fitnessfunctions.schwefel_m,500,-500
+#f,u,l=fitnessfunctions.schwefel_m,500,-500
 #f,u,l=fitnessfunctions.rastrigin_m,8,-8
 #f,u,l=fitnessfunctions.ackley_m,32,-32
 #f,u,l=fitnessfunctions.michalewicz_m,np.pi,0
 
 S=50
 N=2
-maxiter=1000
+maxiter=500
 
 #PSO:
 #w_initial=0.9
@@ -61,7 +61,8 @@ for i in range(maxiter):
   kbest=int(round( (0.02+(1-i/maxiter)*(1-0.02))*S ))
   #article method to calculate m:
   m=(Y-worstY)/(bestY-worstY+epsilon) #calculate the inertial mass between 0 and 1
-  M=m/m.sum() #make the total system mass equal 1
+  #m=1-(Y-bestY)/(worstY-bestY)
+  M=m/np.maximum(epsilon,m.sum()) #make the total system mass equal 1
   M=M.reshape((-1,1)) #transpose the matrix
   #e) Calculation of the total force in different directions
   A=np.zeros(X.shape)
@@ -140,7 +141,7 @@ if(N==2):
   Z0=f(X).reshape(X0.shape)
   zmin=np.min(Z0)
   zmax=np.max(Z0)
-  #ax.plot_surface(X0,X1,Z0,cmap=cm.jet,linewidth=0,rstride=1,cstride=1,antialiased=True)
+  ax.plot_surface(X0,X1,Z0,cmap=cm.jet,linewidth=0,rstride=1,cstride=1,antialiased=True)
   ax.contour(X0, X1, Z0, zdir='z', offset=zmin-0.0*(zmax-zmin), cmap=cm.coolwarm)
   
   s0=ax.scatter(X_history[0][:,0],X_history[0][:,1],f(X_history[0])+(u-l)/100,color='g')
