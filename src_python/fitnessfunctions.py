@@ -167,7 +167,7 @@ class Schwefel(FitnessFunction):
   def default_bounds(ndim):
     return (np.zeros(ndim)-500., np.zeros(ndim)+500)
 
-  
+
 class Ackley(FitnessFunction):
   name='Ackley'
   def evaluate(X):
@@ -180,7 +180,7 @@ class Ackley(FitnessFunction):
     return (0., np.zeros(ndim))
   def default_bounds(ndim):
     return (np.zeros(ndim)-32., np.zeros(ndim)+32)
-  
+
 
 class Michalewicz(FitnessFunction):
   name='Michalewicz'
@@ -221,19 +221,38 @@ class Michalewicz(FitnessFunction):
   def default_bounds(ndim):
     return (np.zeros(ndim),np.ones(ndim)*np.pi)
 
+class RotatedHyperEllipsoid(FitnessFunction):
+  name='RotatedHyperEllipsoid'
+  def evaluate(X):
+    m,n=X.shape
+    ##original version:
+    #return np.sum([np.sum(X[:,:i]**2,axis=1) for i in range(1,n+1)],axis=0)
+    ##faster version:
+    return ((X**2)*np.arange(n,0,-1)).sum(axis=1)
+  def evaluate_single(x):
+    n,=x.shape
+    ##original vesion:
+    #return np.sum([np.sum(x[:i]**2) for i in range(1,n+1)])
+    ##faster vesion:
+    return ((x**2)*np.arange(n,0,-1)).sum()
+  def default_minimum(ndim):
+    return (0., np.zeros(ndim))
+  def default_bounds(ndim):
+    return (np.zeros(ndim)-65.536, np.zeros(ndim)+65.536)
+
 
 def test(c,dims,nsamples,tol):
   """
   Test a subclass of FitnessFunction.
-  
+
   Takes a class c as an argument, throws an "AssertionError" in case of failure.
   Tests if all the methods are present, if the default minimums reported are
-    sane, if the implementations of the evaluation of a single input and an 
+    sane, if the implementations of the evaluation of a single input and an
     array of inputs are equivalent, and randomly tests values and optimizations
     starting from random points to check if a better value is found than the
     reported minimum.
   Also tests if there is any numeric problem evaluating with many dimensions.
-  
+
   """
   assert(hasattr(c,'evaluate'))
   assert(hasattr(c,'evaluate_single'))
@@ -246,7 +265,7 @@ def test(c,dims,nsamples,tol):
     #checking for sanity in the number of dimensions:
     assert(n>0) #is the number of dimensions greater than zero?
     assert(n==int(n)) #is the number of dimensions an integer?
-    #print a diagnostic if last diagnostic was more than 5 seconds ago.    
+    #print a diagnostic if last diagnostic was more than 5 seconds ago.
     if(time()-t>5):
 
       print(' n='+str(n),'dimensions...')
@@ -265,7 +284,17 @@ def test(c,dims,nsamples,tol):
     #do the single evaluation and the matrix evaluation match?
     se=np.array([c.evaluate_single(x) for x in X]) #single evaluation
     me=c.evaluate(X) #matrix evaluation
+    '''
+    #DEBUG:
+    if not ((np.abs(se-me)<tol).all()):
+      offending=np.where(np.abs(se-me)>=tol)
+      print( se[offending])
+      print( me[offending])
+      print( np.abs(se[offending]- me[offending]))
+    assert ((np.abs(se-me)<tol).all())
+    '''
     assert ((se==me).all())
+
     #do all the evaluations above produce larger values than the provided minimum?
     assert((me>=ymin).all())
     #is the provided global minimum really minimum?
@@ -282,7 +311,7 @@ def test(c,dims,nsamples,tol):
       assert(res.fun>=ymin-tol)
   return True
 
-all_functions={i[0]:i[1] for i in vars().copy().items() if 
+all_functions={i[0]:i[1] for i in vars().copy().items() if
                 hasattr(i[1],'evaluate') and
                 hasattr(i[1],'evaluate_single') and
                 hasattr(i[1],'default_bounds') and
@@ -293,7 +322,7 @@ def test_all():
   """ Test for all FitnessFunction classes except the FitnessFunction classe. """
   v=all_functions.copy()
   for i in v.keys():
-    maxdim=10
+    maxdim=15
     nsamples=100
     print('Testing',i,'with dimensions up to ',maxdim,' and',nsamples,'random samples.')
     if(i=='Rosenbrock'):
@@ -329,3 +358,4 @@ e=Michalewicz.evaluate_single
 generate_surface(e,lb[0],lb[1],ub[0],ub[1],201)
 plt.show()
 #'''
+
