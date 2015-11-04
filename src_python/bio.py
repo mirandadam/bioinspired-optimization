@@ -69,12 +69,12 @@ class Optimizer:
           (s.target_cost is None or s._ybest > s.target_cost) ):
       i=s._iter
       s.iterate_one()
-      x_history.append(s._xbest)
-      y_history.append(s._ybest)
+      x_history.append(s._bestx)
+      y_history.append(s._besty)
       #protect against s.iterate_one incrementing the s._iter counter:
       if(s._iter==i):
         s._iter+=1
-    return (s._ybest,s._xbest)
+    return (y_history,x_history)
 
 
 class PSO(Optimizer):
@@ -146,7 +146,7 @@ class PSO(Optimizer):
     #applying speed limit:
     vnorm=((s._V**2).sum(axis=1))**0.5 #norm of the speed
     aux=np.where(vnorm>s.max_v) #particles with velocity greater than expected
-    s._V[aux]=s._V[aux]*s.max_v/(vnorm[aux]) #clipping the speed to the maximum speed
+    s._V[aux]=s._V[aux]*s.max_v/(vnorm[aux].reshape((-1,1))) #clipping the speed to the maximum speed
 
     #update solutions:
     s._X=s._X+s._V
@@ -301,25 +301,25 @@ all_algorithms={i[0]:i[1] for i in vars().copy().items() if
                 hasattr(i[1],'run') and
                 hasattr(i[1],'run_with_history')}
 
-def test(algo,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
+def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
   #TODO: check the fitnessfunction test and see if there are any tests that can be applied here
   #TODO: do a lot more tests
   #TODO: check if the name attribute is the same as the name of the class.
   f=Fitnessfunc.evaluate
   lb,ub=Fitnessfunc.default_bounds(dimensions)
   ymin,xmin=Fitnessfunc.default_minimum(dimensions)
-  a=algo(f,dimensions,lb,ub,**kwargs)
-  y,x=a.run()
-  cost_delta=((y-ymin)**2).sum()**0.5
-  solution_delta=((x-xmin)**2).sum()**0.5
+  a=algorithm(f,dimensions,lb,ub,**kwargs)
+  y,x=a.run_with_history()
+  cost_delta=((y[-1]-ymin)**2).sum()**0.5
+  solution_delta=((x[-1]-xmin)**2).sum()**0.5
   print('cost difference to ideal:     ',cost_delta)
-  print('solution difference to ideal: ',solution_delta)
+  print('solution distance to ideal: ',solution_delta)
   print('converged within tolerance?   ',cost_delta<tolerance)
-  print('Solution found:\n',x)
+  print('Solution found:\n',x[-1])
   print('Theoretical best solution possible:\n',xmin)
-  print('cost achieved:\n',y)
+  print('cost achieved:\n',y[-1])
   print('Theoretical best cost:\n',ymin)
 
-c=fitnessfunctions.Sphere
-ndim=10
-test(ABC,c,ndim,maxiter=1000)
+#c=fitnessfunctions.Rosenbrock
+#ndim=6
+#test(PSO,c,ndim,maxiter=1000,tolerance=1e-2,n=30)
