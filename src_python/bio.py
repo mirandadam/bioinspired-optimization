@@ -561,4 +561,4 @@ def test_all():
   for i in all_algorithms.items():
     test(i[1],c,ndim,maxiter=500,tolerance=1e-2,n=nparticles)
 
-test_all()
+#test_all()
