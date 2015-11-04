@@ -76,7 +76,7 @@ for i in dimensions:
           # best solution found, theoretical best solution,
           # norm of the distance between the ideal solution and the solution fount
           results.append([i,j,f[0],a[0],k,y,ymin,cost_delta,x,xmin,solution_delta])
-          
+
 t1=time()
 print('time elapsed:',t1-t0,'seconds.')
 
@@ -105,4 +105,4 @@ for t in range(len(tables)):
       stddev_cost=np.std(costs[:,0])
       success_rate=np.sum(np.abs(costs[:,0]-costs[:,1])<tolerance)/32
       print('\t N='+str(d)+'\t'+str(mean_cost)+'\t'+str(median_cost)+'\t'+str(min_cost)+'\t'+str(stddev_cost)+'\t'+str(round(success_rate*100,2)))
-      
+

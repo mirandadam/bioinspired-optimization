@@ -18,6 +18,8 @@
 import numpy as np
 import fitnessfunctions #needed for testing.
 
+#TODO: cite the references to the algorithms.
+#TODO: have somebody else review this code.
 
 class Optimizer:
   """
@@ -79,7 +81,7 @@ class Optimizer:
 
 class PSO(Optimizer):
   name='PSO'
-  description='Particle Swarm Optimization algorithm.'
+  description='Particle Swarm Optimization (PSO) algorithm'
   #algorithm tuning:
   n=10                   #number of particles
   w0=0.9                 #initial inertia coefficient (weight)
@@ -166,7 +168,7 @@ class PSO(Optimizer):
 
 class ABC(Optimizer):
   name='ABC'
-  description='Artificial Bee Colony algorithm.'
+  description='Artificial Bee Colony (ABC) algorithm'
 
   nb=24                 #Number of bees (employed bees plus onlooker bees).
   nf=12                 #Number of food sources. Default is nb/2.
@@ -174,7 +176,7 @@ class ABC(Optimizer):
 
 
   def __init__(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
-           nb=24,nf=12,abandon_threshold=20):
+           n=12,nb=24,abandon_threshold=20):
     #TODO: do input checking here.
     s=self
 
@@ -187,13 +189,13 @@ class ABC(Optimizer):
     s.target_cost=target_cost
 
     s.nb=nb                               # Number of bees (employed bees plus onlooker bees).
-    s.nf=nf                               # Number of food sources. Default is nb/2.
+    s.nf=n                                # Number of food sources. Default is nb/2.
     s.abandon_threshold=abandon_threshold # Number of consecutive improvement trials that a food source undergoes before being abandoned.
 
     #initial conditions:
-    s._X = np.random.random((nf,dimensions))*(ub-lb)+lb # current food sources
+    s._X = np.random.random((s.nf,dimensions))*(ub-lb)+lb # current food sources
     s._Y = s.costfunction(s._X)                         # current source cost
-    s._trials = np.zeros(nf)                            # number of attempts to improve each solution
+    s._trials = np.zeros(s.nf)                            # number of attempts to improve each solution
 
     s._bestidx=np.argmin(s._Y)       # index of best particle (food source) - watch out!!! if scout bees destroy this solution, the index is no longer valid, even though the besty and bestx variables are.
     s._bestx=s._X[s._bestidx].copy() # solution of best particle (food source) ever
@@ -296,6 +298,223 @@ class ABC(Optimizer):
     return
 
 
+class DE(Optimizer):
+  name='DE'
+  description='Differential Evolution (DE) algorithm'
+  #algorithm tuning:
+  n=10   #number of particles
+  f=0.5  #mutation factor
+  c=0.9  #crossover rate
+
+  #state variables:
+  _iter=0
+
+  def __init__(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
+           n=50,f=0.5,c=0.9):
+    """
+    The cost function has to take arrays with (m,n) shape as inputs, where
+     m is the number of particles and n is the number of dimensions.
+    lb is the lower bound for each dimension
+    ub is the upper bound for each dimension
+    """
+    s=self
+    #TODO: do some serious input checking here.
+
+    #problem parameters:
+    s.costfunction=costfunction
+    s.dimensions=dimensions
+    s.lb=lb.copy()
+    s.ub=ub.copy()
+    s.maxiter=maxiter
+    s.target_cost=target_cost
+
+    #algorithm tuning:
+    s.n=n
+    s.f=f
+    s.c=c
+
+    #initial conditions:
+    s._X = np.random.random((n,dimensions))*(ub-lb)+lb # current individuals
+    s._Y = s.costfunction(s._X)                        # current cost
+
+    s._bestidx=np.argmin(s._Y)             # index of best individual
+    s._bestx=s._X[s._bestidx].copy() # solution of best individual
+    s._besty=s._Y[s._bestidx]        # cost of best individual
+
+    s._iter=0
+
+
+  def _mutate(self,direction):
+    """
+      Selects neighbours and apply mutation.
+    """
+    #def mutate(X,F,direction=1):#div):
+    #div_min = 0.25
+    #div_max = 0.50
+    #if(div<div_min):
+    #  direction=-1
+    #elif(div>div_max):
+    #  direction=1
+
+    s=self
+    n=s.n
+    assert(n>3) #only works with 4 or more individuals
+
+    #getting random neighbours to permutate
+    neighbours=np.array([np.random.permutation(n-1)[:3] for i in range(n)]).transpose()
+    neighbours=(neighbours+np.arange(n)+1)%n
+    n0=np.arange(n)    #self
+    n1=neighbours[0,:] #neighbours different from self
+    n2=neighbours[1,:] #neighbours different from self and n1
+    n3=neighbours[2,:] #neighbours different from self, n1 and n2
+    '''
+    #DEBUG:
+    assert((n0!=n1).all())
+    assert((n0!=n2).all())
+    assert((n0!=n3).all())
+    assert((n1!=n2).all())
+    assert((n1!=n3).all())
+    assert((n2!=n3).all())
+    '''
+    #mutation:
+    m=s._X[n1]+direction*s.f*(s._X[n2]-s._X[n3])
+    return m
+
+  def iterate_one(self):
+    s=self
+
+    #Mutation:
+    mutated_X=s._mutate(direction=1)
+    #TODO: implement changing the mutation direction
+
+    #If generated parameter value is out of boundaries, it is shifted onto the boundaries:
+    mutated_X=np.minimum(s.ub,mutated_X)
+    mutated_X=np.maximum(s.lb,mutated_X)
+
+    # Crossover put the result in the U matrix
+    d=np.random.randint(s.dimensions,size=(s.n,)) #dimensions chosen for each individual
+    r1=np.random.rand(s.n,s.dimensions) #calculating random variables
+    aux=(r1<s.c) #dimensions to crossover based on probability
+    aux[(np.arange(s.n),d)]=True #choose one dimension of each individual to crossover regardless os probability
+    crossover_X=aux*mutated_X+(1-aux)*s._X #take elements from the mutated solution and assign them to the population
+
+    # Selection
+    fc=s.costfunction(crossover_X)
+    aux=(fc<s._Y) #individuals where the cost function decreased
+    s._X=aux.reshape((-1,1))*crossover_X+(1-aux).reshape((-1,1))*s._X
+    s._Y=aux*fc+(1-aux)*s._Y
+
+    s._bestidx=np.argmin(s._Y)        # index of best particle in Xmemory
+    s._bestx=s._X[s._bestidx].copy()  # solution of best particle in Xmemory
+    s._besty=s._Y[s._bestidx]         # cost of best particle in Xmemory
+    return
+
+
+class FA(Optimizer):
+  name='FA'
+  description='Firefly (FA) algorithm'
+  #algorithm tuning:
+  n=20                    #Swarm size
+  alpha=None              #coefficient of random movement, should be related to the range of possible values. 1/100 of the full range
+  #suggested alpha is 1*((ub-lb)/20)
+  delta=0.99              #randomization dampening coefficient
+  exponent=None           #gamma, light absorption exponent, should be related to the range of possible values. 1/(range^0.5)
+  #suggested exponent is (1/(ub-lb))**0.5
+  beta0=1                 #constant that multiplies the attraction
+
+  #state variables:
+  _iter=0
+
+  def __init__(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
+           n=20,alpha=None,delta=0.99,exponent=None,beta0=1):
+    """
+    The cost function has to take arrays with (m,n) shape as inputs, where
+     m is the number of particles and n is the number of dimensions.
+    lb is the lower bound for each dimension
+    ub is the upper bound for each dimension
+    """
+    s=self
+    #TODO: do some serious input checking here.
+
+    #problem parameters:
+    s.costfunction=costfunction
+    s.dimensions=dimensions
+    s.lb=lb.copy()
+    s.ub=ub.copy()
+    s.maxiter=maxiter
+    s.target_cost=target_cost
+
+    #algorithm tuning:
+    s.n=n
+
+    u=ub.max()
+    l=lb.min()
+
+    if alpha is None:
+      s.alpha=1*((u-l)/20) #suggested value for alpha
+    else:
+      s.alpha=alpha
+    s.delta=delta
+    if exponent is None:
+      s.exponent=(1/(u-l))**0.5 #suggested value for the exponent
+    else:
+      s.exponent=exponent
+    s.beta0=beta0
+
+    #initial conditions:
+    s._X = np.random.random((n,dimensions))*(ub-lb)+lb # current particle solutions
+    s._Y = s.costfunction(s._X)                        # current particle cost
+
+    s._bestidx=np.argmin(s._Y)       # index of best particle in Xmemory
+    s._bestx=s._X[s._bestidx].copy() # solution of best particle in Xmemory
+    s._besty=s._Y[s._bestidx]        # cost of best particle in Xmemory
+
+    s._iter=0
+
+  def iterate_one(self):
+    s=self
+
+    #sequence of fireflies ordered by cost starting with the better ones:
+    sequence=np.argsort(s._Y)
+
+    #random part of the movement:
+    nextX=s._X+s.alpha*(np.random.rand(s.n,s.dimensions)-0.5) #beta term is calculated on the loop
+    #calculation of the attraction (beta) contribution:
+    for j in range(1,s.n):
+      d=s._X[sequence[:j]]-s._X[sequence[j]] #vector distance between the jth brightest individual and the fireflies that are brighter than it
+      r2=(d*d).sum(axis=1) #squared norm of the difference
+      beta=s.beta0*np.exp(-s.exponent*r2).reshape((-1,1)) # calculating the beta contribution
+      nextX[sequence[j]]+=(beta*d).sum(axis=0) # adding beta to the jth brightest individual
+      del j
+    del d,r2,beta
+
+    #update alpha value to migrate from exploration to exploitation gradually
+    s.alpha=s.alpha*s.delta
+
+
+    #applying search space limits:
+    nextX=np.minimum(s.ub,nextX)
+    nextX=np.maximum(s.lb,nextX)
+    #calculating new costs:
+    nextY=s.costfunction(nextX)
+
+    #WARNING!!! firefly algorithm does not seem to check if individual solutions were improved
+    #aux=np.where(nextY<Y)
+    #X[aux]=nextX[aux]
+    #Y[aux]=nextY[aux]
+
+    s._X=nextX.copy()
+    s._Y=nextY.copy()
+    del nextX,nextY
+
+    s._bestidx=np.argmin(s._Y)        # index of best particle in current solution
+    #if(s._besty>s._Y[s._bestidx]):
+    s._bestx=s._X[s._bestidx].copy()  # solution of best particle
+    s._besty=s._Y[s._bestidx]         # cost of best particle
+    return
+
+
+
 all_algorithms={i[0]:i[1] for i in vars().copy().items() if
                 hasattr(i[1],'iterate_one') and
                 hasattr(i[1],'run') and
@@ -312,14 +531,34 @@ def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
   y,x=a.run_with_history()
   cost_delta=((y[-1]-ymin)**2).sum()**0.5
   solution_delta=((x[-1]-xmin)**2).sum()**0.5
-  print('cost difference to ideal:     ',cost_delta)
+  print('cost difference to ideal:   ',cost_delta)
   print('solution distance to ideal: ',solution_delta)
-  print('converged within tolerance?   ',cost_delta<tolerance)
+  print('converged within tolerance? ',cost_delta<tolerance)
   print('Solution found:\n',x[-1])
   print('Theoretical best solution possible:\n',xmin)
   print('cost achieved:\n',y[-1])
   print('Theoretical best cost:\n',ymin)
 
-#c=fitnessfunctions.Rosenbrock
-#ndim=6
-#test(PSO,c,ndim,maxiter=1000,tolerance=1e-2,n=30)
+  from matplotlib import pyplot as plt
+  fig = plt.figure(a.description)
+  ax1=fig.add_subplot(211)
+  #ax1.plot(np.log10(cost_history))
+  ax1.plot(y)
+  #ax1.set_label(a.name)
+  ax1.set_ylabel("$mincost$")
+  ax2=fig.add_subplot(212)
+  ax2.plot(np.log10(np.array(y)-ymin))
+  ax2.set_ylabel("$log_{10}(mincost-theoreticalminimum)$")
+  ax2.set_xlabel("$iteration$")
+
+def test_all():
+  c=fitnessfunctions.Sphere
+  #c=fitnessfunctions.Schwefel
+  #c=fitnessfunctions.Michalewicz
+  #c=fitnessfunctions.Rosenbrock
+  ndim=6
+  nparticles=30
+  for i in all_algorithms.items():
+    test(i[1],c,ndim,maxiter=500,tolerance=1e-2,n=nparticles)
+
+test_all()
