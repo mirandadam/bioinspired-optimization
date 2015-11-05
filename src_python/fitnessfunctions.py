@@ -357,5 +357,6 @@ def plot2dprofile(c,nsamples=101):
   ax.plot_surface(X,Y,Z,cmap=cm.jet,linewidth=0,rstride=1,cstride=1,antialiased=True)
   ax.contour(X, Y, Z, zdir='z', offset=zmin, cmap=cm.coolwarm)
 
-#plot2dsample(Michalewicz)
+#plot2dprofile(Michalewicz)
+#plot2dprofile(RotatedHyperEllipsoid,201)
 #test_all()
