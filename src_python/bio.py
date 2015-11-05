@@ -411,22 +411,22 @@ class DE(Optimizer):
 
 
 class FA(Optimizer):
-  name='FA'
-  description='Firefly (FA) algorithm'
+  name='FA2'
+  description='Firefly (FA) algorithm, revised'
   #algorithm tuning:
   n=20                    #Swarm size
-  alpha=None              #coefficient of random movement, should be related to the range of possible values. 1/100 of the full range
-  #suggested alpha is 1*((ub-lb)/20)
+  alpha=0.5               #coefficient of random movement, is multiplied by the scale
   delta=0.99              #randomization dampening coefficient
-  exponent=None           #gamma, light absorption exponent, should be related to the range of possible values. 1/(range^0.5)
+  exponent=1              #gamma, light absorption exponent, should be related to the range of possible values. 1/(range^0.5)
   #suggested exponent is (1/(ub-lb))**0.5
   beta0=1                 #constant that multiplies the attraction
+  betamin=0.2             #minimum possible attraction value. see calculation.
 
   #state variables:
   _iter=0
 
   def __init__(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
-           n=20,alpha=None,delta=0.99,exponent=None,beta0=1):
+           n=20,alpha=0.5,delta=.99,exponent=1,beta0=1,betamin=0.2):
     """
     The cost function has to take arrays with (m,n) shape as inputs, where
      m is the number of particles and n is the number of dimensions.
@@ -444,16 +444,14 @@ class FA(Optimizer):
     s.maxiter=maxiter
     s.target_cost=target_cost
 
+    s.scale=(ub-lb) #scale for calculating random part
     #algorithm tuning:
     s.n=n
 
     u=ub.max()
     l=lb.min()
 
-    if alpha is None:
-      s.alpha=1*((u-l)/20) #suggested value for alpha
-    else:
-      s.alpha=alpha
+    s.alpha=alpha
     s.delta=delta
     if exponent is None:
       s.exponent=(1/(u-l))**0.5 #suggested value for the exponent
@@ -474,45 +472,44 @@ class FA(Optimizer):
   def iterate_one(self):
     s=self
 
-    #sequence of fireflies ordered by cost starting with the better ones:
+    #order fireflies by cost starting with the lower cost (brightest) ones:
     sequence=np.argsort(s._Y)
+    s._Y=s._Y[sequence]
+    s._X=s._X[sequence]
+    s._bestidx=np.where(sequence==s._bestidx)[0][0]
 
-    #random part of the movement:
-    nextX=s._X+s.alpha*(np.random.rand(s.n,s.dimensions)-0.5) #beta term is calculated on the loop
-    #calculation of the attraction (beta) contribution:
-    for j in range(1,s.n):
-      d=s._X[sequence[:j]]-s._X[sequence[j]] #vector distance between the jth brightest individual and the fireflies that are brighter than it
-      r2=(d*d).sum(axis=1) #squared norm of the difference
-      beta=s.beta0*np.exp(-s.exponent*r2).reshape((-1,1)) # calculating the beta contribution
-      nextX[sequence[j]]+=(beta*d).sum(axis=0) # adding beta to the jth brightest individual
-      del j
-    del d,r2,beta
+
+    for i in range(s.n): #for all fireflies
+      position_of_brightest=s._X[i]
+      for j in range(i+1,s.n): #iterate over the ones which are less bright
+        # moving the firefly
+        #calculating random part:
+        random_part=s.alpha*(np.random.rand(s.dimensions)-0.5)*s.scale
+        initial_position=s._X[j]
+        r2=np.sum((position_of_brightest-initial_position)**2)
+        #calculation of the attraction (beta) contribution:
+        beta=(s.beta0-s.betamin)*np.exp(-s.exponent*r2) + s.betamin
+        #updating position:
+        s._X[j]=initial_position+beta*(position_of_brightest-initial_position)+random_part
+        del j,random_part,initial_position,r2,beta
+      del i,position_of_brightest
 
     #update alpha value to migrate from exploration to exploitation gradually
     s.alpha=s.alpha*s.delta
 
-
     #applying search space limits:
-    nextX=np.minimum(s.ub,nextX)
-    nextX=np.maximum(s.lb,nextX)
+    s._X=np.minimum(s.ub,s._X)
+    s._X=np.maximum(s.lb,s._X)
     #calculating new costs:
-    nextY=s.costfunction(nextX)
+    s._Y=s.costfunction(s._X)
 
     #WARNING!!! firefly algorithm does not seem to check if individual solutions were improved
-    #aux=np.where(nextY<Y)
-    #X[aux]=nextX[aux]
-    #Y[aux]=nextY[aux]
-
-    s._X=nextX.copy()
-    s._Y=nextY.copy()
-    del nextX,nextY
 
     s._bestidx=np.argmin(s._Y)        # index of best particle in current solution
     #if(s._besty>s._Y[s._bestidx]):
     s._bestx=s._X[s._bestidx].copy()  # solution of best particle
     s._besty=s._Y[s._bestidx]         # cost of best particle
     return
-
 
 
 all_algorithms={i[0]:i[1] for i in vars().copy().items() if
@@ -523,7 +520,7 @@ all_algorithms={i[0]:i[1] for i in vars().copy().items() if
 def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
   """
     Does basic testing of the algorithm and plots a convergence curve.
-    
+
     Do not forget to call plt.show() after running all the tests you want to show.
     Example:
       test(PSO,
@@ -554,7 +551,7 @@ def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
   print('Theoretical best cost:\n',ymin)
 
   from matplotlib import pyplot as plt
-  fig = plt.figure(a.description)
+  fig = plt.figure(Fitnessfunc.name+' cost function, '+a.description)
   ax1=fig.add_subplot(211)
   #ax1.plot(np.log10(cost_history))
   ax1.plot(y)
@@ -572,11 +569,12 @@ def test_all():
   #c=fitnessfunctions.Schwefel
   #c=fitnessfunctions.Michalewicz
   #c=fitnessfunctions.Rosenbrock
-  ndim=12
+  ndim=6
   nparticles=30
   for i in all_algorithms.items():
-    test(i[1],c,ndim,maxiter=1000,tolerance=1e-2,n=nparticles)
+    test(i[1],c,ndim,maxiter=500,tolerance=1e-2,n=nparticles)
   from matplotlib import pyplot as plt
   plt.show()
-  
-#test_all()
+
+all_algorithms={i[0]:i[1] for i in all_algorithms.items() if 'FA2' in i[0]}
+test_all()
