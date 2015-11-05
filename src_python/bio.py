@@ -521,6 +521,20 @@ all_algorithms={i[0]:i[1] for i in vars().copy().items() if
                 hasattr(i[1],'run_with_history')}
 
 def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
+  """
+    Does basic testing of the algorithm and plots a convergence curve.
+    
+    Do not forget to call plt.show() after running all the tests you want to show.
+    Example:
+      test(PSO,
+           fitnessfunctions.Rastrigin,
+           ndim=2,
+           maxiter=500,
+           tolerance=1e-2,
+           n=30)
+      from matplotlib import pyplot as plt
+      plt.show()
+  """
   #TODO: check the fitnessfunction test and see if there are any tests that can be applied here
   #TODO: do a lot more tests
   #TODO: check if the name attribute is the same as the name of the class.
@@ -550,15 +564,19 @@ def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
   ax2.plot(np.log10(np.array(y)-ymin))
   ax2.set_ylabel("$log_{10}(mincost-theoreticalminimum)$")
   ax2.set_xlabel("$iteration$")
+  #plt.show()
 
 def test_all():
-  c=fitnessfunctions.Sphere
+  #c=fitnessfunctions.Sphere
+  c=fitnessfunctions.Rastrigin
   #c=fitnessfunctions.Schwefel
   #c=fitnessfunctions.Michalewicz
   #c=fitnessfunctions.Rosenbrock
-  ndim=6
+  ndim=12
   nparticles=30
   for i in all_algorithms.items():
-    test(i[1],c,ndim,maxiter=500,tolerance=1e-2,n=nparticles)
-
+    test(i[1],c,ndim,maxiter=1000,tolerance=1e-2,n=nparticles)
+  from matplotlib import pyplot as plt
+  plt.show()
+  
 #test_all()

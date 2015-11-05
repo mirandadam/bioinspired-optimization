@@ -25,7 +25,7 @@ functions={i:fitnessfunctions.all_functions[i] for i in ['Michalewicz','Rosenbro
 algorithms={i:bio.all_algorithms[i] for i in ['ABC','PSO']}
 
 swarm_sizes=[10,15,20]
-dimensions=[6,10,14,18,22]
+dimensions=[2,6,10,14,18,22]
 number_of_repetitions=32
 
 pso_parameters={
@@ -40,14 +40,14 @@ pso_parameters={
 
 abc_parameters={
   'nb':24,                 #*Number of bees (employed bees plus onlooker bees)
-  'nf':12,                 #*Number of food sources. Default is NB/2.
+  'n':12,                 #*Number of food sources. Default is NB/2.
   'abandon_threshold':20,  #Number of consecutive improvement trials that a food source undergoes before being abandoned
 }
 
 arg_dict=dict(ABC=abc_parameters, PSO=pso_parameters)
 
 ## calculating the raw data: ##
-'''
+#'''
 results=[]
 t0=time()
 for i in dimensions:
@@ -60,10 +60,7 @@ for i in dimensions:
       for a in algorithms.items():
         a_name=a[1].name
         args=arg_dict[a_name]
-        if(a_name=='ABC'):
-          args['nf']=j
-        elif(a_name=='PSO'):
-          args['n']=j
+        args['n']=j
         print (i,j,f[0],a[0])
         for k in range(number_of_repetitions):
           o=a[1](f_eval,i,lb,ub,maxiter=1000,**args)
@@ -90,7 +87,7 @@ f=open("exercise_1_raw_data.pickle",'rb')
 results=pickle.load(f)
 f.close()
 
-tolerance=1e-2
+tolerance=1e-1
 tables=sorted(list(set([(i[2],i[3]) for i in results])),reverse=True)
 for t in range(len(tables)):
   print('Table '+str(t+1)+'. Convergency of the '+tables[t][1]+' algorithm applied to the '+tables[t][0]+' function.')

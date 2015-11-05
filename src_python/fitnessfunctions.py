@@ -19,6 +19,7 @@ import abc
 import numpy as np
 from scipy.optimize import minimize
 from time import time #used for testing
+from time import sleep #used for testing
 
 
 class FitnessFunction:
@@ -322,7 +323,7 @@ def test_all():
   """ Test for all FitnessFunction classes except the FitnessFunction classe. """
   v=all_functions.copy()
   for i in v.keys():
-    maxdim=15
+    maxdim=10
     nsamples=100
     print('Testing',i,'with dimensions up to ',maxdim,' and',nsamples,'random samples.')
     if(i=='Rosenbrock'):
@@ -331,31 +332,30 @@ def test_all():
       dims=range(1,maxdim+1)
     test(v[i],dims,nsamples,1e-9) #test with a tolerance of 1e-9
     print(' ',i,'passed test.')
+    plot2dprofile(v[i])
+    sleep(2)
+  import matplotlib.pyplot as plt
+  plt.show()
+  return
 
-
-#test_all()
-
-'''
-#graphical testing:
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d
-from matplotlib import cm
-
-def generate_surface(f,x0,y0,x1,y1,nsamples):
-  fig = plt.figure()
+def plot2dprofile(c,nsamples=101):
+  import matplotlib.pyplot as plt
+  from mpl_toolkits.mplot3d import axes3d
+  from matplotlib import cm
+  fig = plt.figure(c.name)
   ax=fig.add_subplot(111,projection='3d')
+  ((x0,y0),(x1,y1))=c.default_bounds(2)
+  zmin,aux=c.default_minimum(2)
   x=np.linspace(x0,x1,nsamples+1)
   y=np.linspace(y0,y1,nsamples+1)
   X,Y=np.meshgrid(x,y)
-  Z=np.array([[f(np.array([i,j])) for j in y] for i in x])
-  zmin=np.min(Z)
-  zmax=np.max(Z)
+  inputvectors=np.concatenate(([X.ravel()],[Y.ravel()]),axis=0).transpose()
+  Z=c.evaluate(inputvectors).reshape(X.shape)
+  #Z=np.array([[(np.array([i,j])) for j in y] for i in x])
+  #zmin=np.min(Z)
+  #zmax=np.max(Z)
   ax.plot_surface(X,Y,Z,cmap=cm.jet,linewidth=0,rstride=1,cstride=1,antialiased=True)
-  cset = ax.contour(X, Y, Z, zdir='z', offset=zmin-0.1*(zmax-zmin), cmap=cm.coolwarm)
+  ax.contour(X, Y, Z, zdir='z', offset=zmin, cmap=cm.coolwarm)
 
-lb,ub=Michalewicz.default_bounds(2)
-e=Michalewicz.evaluate_single
-generate_surface(e,lb[0],lb[1],ub[0],ub[1],201)
-plt.show()
-#'''
-
+#plot2dsample(Michalewicz)
+#test_all()
