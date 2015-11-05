@@ -411,7 +411,7 @@ class DE(Optimizer):
 
 
 class FA(Optimizer):
-  name='FA2'
+  name='FA'
   description='Firefly (FA) algorithm, revised'
   #algorithm tuning:
   n=20                    #Swarm size
@@ -565,10 +565,10 @@ def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
 
 def test_all():
   #c=fitnessfunctions.Sphere
-  c=fitnessfunctions.Rastrigin
+  #c=fitnessfunctions.Rastrigin
   #c=fitnessfunctions.Schwefel
   #c=fitnessfunctions.Michalewicz
-  #c=fitnessfunctions.Rosenbrock
+  c=fitnessfunctions.Rosenbrock
   ndim=6
   nparticles=30
   for i in all_algorithms.items():
@@ -576,5 +576,5 @@ def test_all():
   from matplotlib import pyplot as plt
   plt.show()
 
-all_algorithms={i[0]:i[1] for i in all_algorithms.items() if 'FA2' in i[0]}
-test_all()
+#all_algorithms={i[0]:i[1] for i in all_algorithms.items() if 'FA' in i[0]}
+#test_all()
