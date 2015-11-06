@@ -391,7 +391,7 @@ class DE(Optimizer):
     mutated_X=np.minimum(s.ub,mutated_X)
     mutated_X=np.maximum(s.lb,mutated_X)
 
-    # Crossover put the result in the U matrix
+    # Crossover
     d=np.random.randint(s.dimensions,size=(s.n,)) #dimensions chosen for each individual
     r1=np.random.rand(s.n,s.dimensions) #calculating random variables
     aux=(r1<s.c) #dimensions to crossover based on probability
@@ -415,7 +415,7 @@ class FA(Optimizer):
   description='Firefly (FA) algorithm, revised'
   #algorithm tuning:
   n=20                    #Swarm size
-  alpha=0.5               #coefficient of random movement, is multiplied by the scale
+  alpha0=0.5               #coefficient of random movement, is multiplied by the scale
   delta=0.99              #randomization dampening coefficient
   exponent=1              #gamma, light absorption exponent, should be related to the range of possible values. 1/(range^0.5)
   #suggested exponent is (1/(ub-lb))**0.5
@@ -426,7 +426,7 @@ class FA(Optimizer):
   _iter=0
 
   def __init__(self,costfunction,dimensions,lb,ub,maxiter=500,target_cost=None,
-           n=20,alpha=0.5,delta=.99,exponent=1,beta0=1,betamin=0.2):
+           n=20,alpha0=0.5,delta=.99,exponent=1,beta0=1,betamin=0.2):
     """
     The cost function has to take arrays with (m,n) shape as inputs, where
      m is the number of particles and n is the number of dimensions.
@@ -451,7 +451,7 @@ class FA(Optimizer):
     u=ub.max()
     l=lb.min()
 
-    s.alpha=alpha
+    s.alpha0=alpha0
     s.delta=delta
     if exponent is None:
       s.exponent=(1/(u-l))**0.5 #suggested value for the exponent
@@ -466,6 +466,8 @@ class FA(Optimizer):
     s._bestidx=np.argmin(s._Y)       # index of best particle in Xmemory
     s._bestx=s._X[s._bestidx].copy() # solution of best particle in Xmemory
     s._besty=s._Y[s._bestidx]        # cost of best particle in Xmemory
+
+    s._alpha=s.alpha0
 
     s._iter=0
 
@@ -484,7 +486,7 @@ class FA(Optimizer):
       for j in range(i+1,s.n): #iterate over the ones which are less bright
         # moving the firefly
         #calculating random part:
-        random_part=s.alpha*(np.random.rand(s.dimensions)-0.5)*s.scale
+        random_part=s._alpha*(np.random.rand(s.dimensions)-0.5)*s.scale
         initial_position=s._X[j]
         r2=np.sum((position_of_brightest-initial_position)**2)
         #calculation of the attraction (beta) contribution:
@@ -495,7 +497,7 @@ class FA(Optimizer):
       del i,position_of_brightest
 
     #update alpha value to migrate from exploration to exploitation gradually
-    s.alpha=s.alpha*s.delta
+    s._alpha=s._alpha*s.delta
 
     #applying search space limits:
     s._X=np.minimum(s.ub,s._X)
@@ -503,13 +505,271 @@ class FA(Optimizer):
     #calculating new costs:
     s._Y=s.costfunction(s._X)
 
-    #WARNING!!! firefly algorithm does not seem to check if individual solutions were improved
+    #WARNING!!! firefly algorithm does not check if individual solutions were improved
 
     s._bestidx=np.argmin(s._Y)        # index of best particle in current solution
     #if(s._besty>s._Y[s._bestidx]):
     s._bestx=s._X[s._bestidx].copy()  # solution of best particle
     s._besty=s._Y[s._bestidx]         # cost of best particle
     return
+
+class FA_OBL(FA):
+  """
+    This is an attempt to addapt the OBL (Opposition-Based Learning) strategy to the firefly algorithm.
+
+    This is original work by the programmer (Daniel), not a published algorithm from a reputed author.
+  """
+
+  name='FA_OBL'
+  description='Firefly (FA) algorithm with the Opposition-Based Learning strategy'
+
+  obl_iteration_threshold=80  #number of iterations without improvement to trigger OBL
+  obl_randomness=0.1          #randomness to aply
+  obl_probability=0.5         #probability of a coordinate to be flipped by the OBL
+
+  def __init__(self,*args,**kwargs):
+    s=self
+    kwargs2=kwargs.copy()
+    if('obl_iteration_threshold' in kwargs2.keys()):
+      s.obl_iteration_threshold=kwargs2.pop('obl_iteration_threshold')
+    if('obl_randomness' in kwargs2.keys()):
+      s.obl_randomness=kwargs2.pop('obl_randomness')
+    if('obl_probability' in kwargs2.keys()):
+      s.obl_probability=kwargs2.pop('obl_probability')
+
+    s._last_alpha=s.alpha0
+    s._count_for_obl=0
+    #init in the superclass:
+    FA.__init__(self,*args,**kwargs2)
+
+  def iterate_one(self):
+    s=self
+    old_best=s._besty
+    FA.iterate_one(self)
+    new_best=s._besty
+    if(new_best>=old_best):
+      s._count_for_obl+=1
+    else:
+      s._last_alpha=s._alpha #record the last alpha that produced an improvement
+    if(s._count_for_obl>=s.obl_iteration_threshold):
+      ### do Opposition-Based Learning ###
+      bestidx=np.argmin(s._Y)
+      invert=(np.random.rand(*(s._X.shape))<s.obl_probability)
+      #preserve the best individual:
+      invert[bestidx,:]=False
+      #calculate noise:
+      noise=s.obl_randomness*(s.ub-s.lb)*(np.random.rand(*(s._X.shape))-0.5) #scale noise according to the search limits
+      #mirror X coordinates:
+      #-x is  (lb+ub)/2 - (x-(lb+ub)/2) which equals lb+ub-x to mirror x about the center of the search limits
+      minusX=((s.ub + s.lb) - s._X)
+      s._X=(1-invert)*s._X + invert*(minusX + noise)
+      #checking bounds:
+      s._X=np.minimum(s.ub,s._X)
+      s._X=np.maximum(s.lb,s._X)
+      #updating costs:
+      s._Y=s.costfunction(s._X)
+      s._bestidx=np.argmin(s._Y)
+      s._bestx=s._X[s._bestidx].copy()  # solution of best particle
+      s._besty=s._Y[s._bestidx]
+
+      #commented out to make it easier to isolate the effects of the OBL itself:
+      ##restore the alpha value of the firefly algorithm to the last one that produced an improvement
+      ##average it with the current alpha, because it may be too much
+      #s._alpha=(0.8*s._last_alpha+0.2*s._alpha)
+      s._count_for_obl=0
+      #print("Triggered OBL in FA_OBL at iteration",s._iter,s._alpha)
+
+
+class DE_OBL(DE):
+  """
+    This is an attempt to addapt the OBL (Opposition-Based Learning) strategy to the differential evolution algorithm.
+
+    This is original work by the programmer (Daniel), not a published algorithm from a reputed author.
+  """
+
+  name='DE_OBL'
+  description='Differential Evolution (DE) algorithm with the Opposition-Based Learning strategy'
+
+  obl_iteration_threshold=80  #number of iterations without improvement to trigger OBL
+  obl_randomness=0.1          #randomness to aply
+  obl_probability=0.5         #probability of a coordinate to be flipped by the OBL
+
+  def __init__(self,*args,**kwargs):
+    s=self
+    kwargs2=kwargs.copy()
+    if('obl_iteration_threshold' in kwargs2.keys()):
+      s.obl_iteration_threshold=kwargs2.pop('obl_iteration_threshold')
+    if('obl_randomness' in kwargs2.keys()):
+      s.obl_randomness=kwargs2.pop('obl_randomness')
+    if('obl_probability' in kwargs2.keys()):
+      s.obl_probability=kwargs2.pop('obl_probability')
+
+    s._count_for_obl=0
+    #init in the superclass:
+    DE.__init__(self,*args,**kwargs2)
+
+  def iterate_one(self):
+    s=self
+    old_best=s._besty
+    DE.iterate_one(self)
+    new_best=s._besty
+    if(new_best>=old_best):
+      s._count_for_obl+=1
+    if(s._count_for_obl>=s.obl_iteration_threshold):
+      ### do Opposition-Based Learning ###
+      bestidx=np.argmin(s._Y)
+      invert=(np.random.rand(*(s._X.shape))<s.obl_probability)
+      #preserve the best individual:
+      invert[bestidx,:]=False
+      #calculate noise:
+      noise=s.obl_randomness*(s.ub-s.lb)*(np.random.rand(*(s._X.shape))-0.5) #scale noise according to the search limits
+      #mirror X coordinates:
+      #-x is  (lb+ub)/2 - (x-(lb+ub)/2) which equals lb+ub-x to mirror x about the center of the search limits
+      minusX=((s.ub + s.lb) - s._X)
+      s._X=(1-invert)*s._X + invert*(minusX + noise)
+      #checking bounds:
+      s._X=np.minimum(s.ub,s._X)
+      s._X=np.maximum(s.lb,s._X)
+      #updating costs:
+      s._Y=s.costfunction(s._X)
+      s._bestidx=np.argmin(s._Y)
+      s._bestx=s._X[s._bestidx].copy()  # solution of best particle
+      s._besty=s._Y[s._bestidx]
+
+      s._count_for_obl=0
+      #print("Triggered OBL in DE_OBL at iteration",s._iter)
+
+
+class FA_CP(FA):
+  """
+    This is an attempt to addapt the CP (Passive Congregation) strategy to the firefly algorithm.
+
+    This is original work by the programmer (Daniel), not a published algorithm from a reputed author.
+  """
+  name='FA_CP'
+  description='Firefly (FA) algorithm with the Passive Congregation (CP) strategy'
+
+  cp_confidence_in_second=0.5 #Passive Congregation confidence in the second best individual
+
+  def __init__(self,*args,**kwargs):
+    s=self
+    kwargs2=kwargs.copy()
+    if('cp_confidence_in_second' in kwargs2.keys()):
+      s.cp_confidence_in_second=kwargs2.pop('cp_confidence_in_second')
+
+    #init in the superclass:
+    FA.__init__(self,*args,**kwargs2)
+
+  def iterate_one(self):
+    s=self
+
+    #order fireflies by cost starting with the lower cost (brightest) ones:
+    sequence=np.argsort(s._Y)
+    s._Y=s._Y[sequence]
+    s._X=s._X[sequence]
+    s._bestidx=np.where(sequence==s._bestidx)[0][0]
+
+    for i in range(s.n): #for all fireflies
+      position_of_brightest=s._X[i]
+      for j in range(max(0,i-1),s.n): #MODIFIED BY THE Passive Congregation CP strategy.
+        # moving the firefly
+        #calculating random part:
+        random_part=s._alpha*(np.random.rand(s.dimensions)-0.5)*s.scale
+        initial_position=s._X[j]
+        r2=np.sum((position_of_brightest-initial_position)**2)
+        #calculation of the attraction (beta) contribution:
+        beta=(s.beta0-s.betamin)*np.exp(-s.exponent*r2) + s.betamin
+        #updating position:
+        if(i>j): #attract to the less bright, weight by confidence
+          s._X[j]=initial_position+s.cp_confidence_in_second*beta*(position_of_brightest-initial_position)+random_part
+        #if i==j do not update the position.
+        if(i<j): #do regular algorithm
+          s._X[j]=initial_position+beta*(position_of_brightest-initial_position)+random_part
+        del j,random_part,initial_position,r2,beta
+      del i,position_of_brightest
+
+    #update alpha value to migrate from exploration to exploitation gradually
+    s._alpha=s._alpha*s.delta
+
+    #applying search space limits:
+    s._X=np.minimum(s.ub,s._X)
+    s._X=np.maximum(s.lb,s._X)
+    #calculating new costs:
+    s._Y=s.costfunction(s._X)
+
+    #WARNING!!! firefly algorithm does not check if individual solutions were improved
+
+    s._bestidx=np.argmin(s._Y)        # index of best particle in current solution
+    #if(s._besty>s._Y[s._bestidx]):
+    s._bestx=s._X[s._bestidx].copy()  # solution of best particle
+    s._besty=s._Y[s._bestidx]         # cost of best particle
+    return
+
+
+class DE_CP(DE):
+  """
+    This is an attempt to addapt the CP (Passive Congregation) strategy to the Differential Evolution algorithm.
+
+    This is original work by the programmer (Daniel), not a published algorithm from a reputed author.
+  """
+
+  name='DE_CP'
+  description='Differential Evolution (DE) algorithm with the Passive Congregation (CP) strategy'
+
+  cp_confidence_in_second=0.5 #Passive Congregation confidence in the second best individual
+
+  def __init__(self,*args,**kwargs):
+    s=self
+    kwargs2=kwargs.copy()
+    if('cp_confidence_in_second' in kwargs2.keys()):
+      s.cp_confidence_in_second=kwargs2.pop('cp_confidence_in_second')
+
+    #init in the superclass:
+    DE.__init__(self,*args,**kwargs2)
+
+  def _mutate(self,direction):
+    """
+      Selects neighbours and apply mutation.
+    """
+
+    s=self
+    n=s.n
+    assert(n>3) #only works with 4 or more individuals
+    #getting neighbours to permutate with probabilities biased to the best fitting:
+    a,b=(np.min(s._Y),np.max(s._Y))
+    weight=s.cp_confidence_in_second
+    b=max(a+0.001,b) #avoiding division by zero
+    p=(1-weight)+weight*(s._Y-a)/(b-a) #relative probability varies between 1-weight and 1
+    p=p/p.sum() #normalized probabilites
+    p=np.cumsum(p) #cumulative probabilities to make it easy to toss a random number and search
+    n0=np.arange(n)    #self
+    n1=p.searchsorted(np.random.rand(n))#neighbours different from self
+    aux=np.where(n1==n0)[0]
+    while(len(aux)>0):
+      n1[aux]=p.searchsorted(np.random.rand(len(aux)))[:]
+      aux=np.where(n1==n0)[0]
+    n2=p.searchsorted(np.random.rand(n))#neighbours different from self and n1
+    aux=np.where((n2==n1) + (n2==n0))[0]
+    while(len(aux)>0):
+      n2[aux]=p.searchsorted(np.random.rand(len(aux)))[:]
+      aux=np.where((n2==n1) + (n2==n0))[0]
+    n3=p.searchsorted(np.random.rand(n))#neighbours different from self, n1 and n2
+    aux=np.where((n3==n2) + (n3==n1) + (n3==n0))[0]
+    while(len(aux)>0):
+      n3[aux]=p.searchsorted(np.random.rand(len(aux)))[:]
+      aux=np.where((n3==n2) + (n3==n1) + (n3==n0))[0]
+    '''
+    #DEBUG:
+    assert((n0!=n1).all())
+    assert((n0!=n2).all())
+    assert((n0!=n3).all())
+    assert((n1!=n2).all())
+    assert((n1!=n3).all())
+    assert((n2!=n3).all())
+    #'''
+    #mutation:
+    m=s._X[n1]+direction*s.f*(s._X[n2]-s._X[n3])
+    return m
 
 
 all_algorithms={i[0]:i[1] for i in vars().copy().items() if
@@ -566,15 +826,17 @@ def test(algorithm,Fitnessfunc,dimensions,tolerance=1e-3,**kwargs):
 def test_all():
   #c=fitnessfunctions.Sphere
   #c=fitnessfunctions.Rastrigin
-  #c=fitnessfunctions.Schwefel
+  c=fitnessfunctions.Schwefel
   #c=fitnessfunctions.Michalewicz
-  c=fitnessfunctions.Rosenbrock
+  #c=fitnessfunctions.Rosenbrock
   ndim=6
   nparticles=30
   for i in all_algorithms.items():
-    test(i[1],c,ndim,maxiter=500,tolerance=1e-2,n=nparticles)
-  from matplotlib import pyplot as plt
-  plt.show()
+    test(i[1],c,ndim,maxiter=1000,tolerance=1e-2,n=nparticles)
+  #from matplotlib import pyplot as plt
+  #plt.show()
 
 #all_algorithms={i[0]:i[1] for i in all_algorithms.items() if 'FA' in i[0]}
 #test_all()
+#from matplotlib import pyplot as plt
+#plt.show()

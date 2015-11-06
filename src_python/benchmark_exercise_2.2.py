@@ -22,28 +22,48 @@ import bio
 import fitnessfunctions
 
 functions={i:fitnessfunctions.all_functions[i] for i in ['Michalewicz','Rosenbrock','RotatedHyperEllipsoid','Schwefel','Rastrigin','Sphere']}
-algorithms={i:bio.all_algorithms[i] for i in ['FA','DE']}
+algorithms={i:bio.all_algorithms[i] for i in ['FA_OBL','FA_CP','DE_OBL','DE_CP']}
 
 swarm_sizes=[20]
-dimensions=[2,6,12]
+dimensions=[12]
 number_of_repetitions=32
 
 fa_parameters=dict(
- alpha0=0.8,
- delta=0.99,
- exponent=0.85, #gamma
- beta0=1
-)
+  alpha0=0.8,
+  delta=0.99,
+  exponent=0.85, #gamma
+  beta0=1
+  )
 
 de_parameters=dict(
-f=1.2,
-c=0.95
-)
+  f=1.2,
+  c=0.95
+  )
 
-arg_dict=dict(FA=fa_parameters, DE=de_parameters)
+obl_parameters=dict(
+  obl_iteration_threshold=40,  #number of iterations without improvement to trigger OBL
+  obl_randomness=0.1,          #randomness to aply
+  obl_probability=0.5          #probability of a coordinate to be flipped by the OBL
+  )
+
+cp_parameters=dict(
+  cp_confidence_in_second=0.5  #Passive Congregation confidence in the second best individual
+  )
+
+fa_obl=fa_parameters.copy()
+fa_obl.update(obl_parameters)
+fa_cp=fa_parameters.copy()
+fa_cp.update(cp_parameters)
+
+de_obl=de_parameters.copy()
+de_obl.update(obl_parameters)
+de_cp=de_parameters.copy()
+de_cp.update(cp_parameters)
+
+arg_dict=dict(FA_OBL=fa_obl, DE_OBL=de_obl, FA_CP=fa_cp, DE_CP=de_cp)
 
 ## calculating the raw data: ##
-'''
+#'''
 results=[]
 t0=time()
 for i in dimensions:
@@ -55,9 +75,9 @@ for i in dimensions:
       ymin,xmin=f[1].default_minimum(i) #target values
       for a in algorithms.items():
         a_name=a[1].name
-        args=arg_dict[a_name]
+        args=arg_dict[a_name].copy()
         args['n']=j
-        print (i,j,f[0],a[0])
+        print (i,j,f[0],a[0],args)
         for k in range(number_of_repetitions):
           o=a[1](f_eval,i,lb,ub,maxiter=1000,**args)
           y,x=o.run()
@@ -73,13 +93,13 @@ for i in dimensions:
 t1=time()
 print('time elapsed:',t1-t0,'seconds.')
 
-f=open("exercise_2_raw_data.pickle",'wb')
+f=open("exercise_2.2_raw_data.pickle",'wb')
 pickle.dump(results,f)
 f.close()
 #'''
 
 ## Outputting the results: ##
-f=open("exercise_2_raw_data.pickle",'rb')
+f=open("exercise_2.2_raw_data.pickle",'rb')
 results=pickle.load(f)
 f.close()
 
@@ -100,7 +120,7 @@ for t in range(len(tables)):
   #print('Table '+str(t+1)+'. Convergency of the '+tables[t][1]+' algorithm applied to the '+tables[t][0]+' function.')
   print(r'\begin{table*}[h]')
   print(r' \centering')
-  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1]+r'}} aplicado à função \textit{'+tables[t][0]+r'}. Valores da função custo após 1000 iterações e 32 repetições.}')
+  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1]+r'}} aplicado à função \textit{'+tables[t][0]+r'}. Valores da função custo após 1000 iterações e '+str(number_of_repetitions)+' repetições.}')
   print(r' \begin{tabular}{llccccr}')
   print(r'  \toprule')
   print(r'   & & média & mediana & mínimo & desvio padrão & taxa de sucesso (\%) \\')
@@ -126,7 +146,7 @@ for t in range(len(tables)):
 
   print(r'\begin{table*}[h]')
   print(r' \centering')
-  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1]+r'}} aplicado à função \textit{'+tables[t][0]+r'}. Comparação das melhores soluções encontradas com o mínimo teórico utilizando 1000 iterações e 32 repetições.}')
+  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1]+r'}} aplicado à função \textit{'+tables[t][0]+r'}. Comparação das melhores soluções encontradas com o mínimo teórico utilizando 1000 iterações e '+str(number_of_repetitions)+' repetições.}')
   print(r' \begin{tabular}{llll}')
   print(r'  \toprule')
   print(r'  tipo & dimensoes & custo & solução correspondente\\')
