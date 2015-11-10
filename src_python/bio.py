@@ -129,6 +129,7 @@ class PSO(Optimizer):
 
     s._Xmemory=s._X.copy()              # memory of best individual solution
     s._Ymemory=s._Y.copy()              # memory of best individual fitness
+    #print(s._X.shape,s._X)
     s._bestidx=np.argmin(s._Ymemory)         # index of best particle in Xmemory
     s._bestx=s._Xmemory[s._bestidx].copy() # solution of best particle in Xmemory
     s._besty=s._Ymemory[s._bestidx]        # cost of best particle in Xmemory
@@ -152,6 +153,10 @@ class PSO(Optimizer):
 
     #update solutions:
     s._X=s._X+s._V
+
+    #clipping the search space
+    s._X=np.minimum(s.ub,s._X)
+    s._X=np.maximum(s.lb,s._X)
 
     #fitness value calculation:
     s._Y = s.costfunction(s._X)  # current particle cost
@@ -638,6 +643,71 @@ class DE_OBL(DE):
 
       s._count_for_obl=0
       #print("Triggered OBL in DE_OBL at iteration",s._iter)
+
+
+class PSO_OBL(PSO):
+  """
+    This is an attempt to addapt the OBL (Opposition-Based Learning) strategy to the differential evolution algorithm.
+
+    This is original work by the programmer (Daniel), not a published algorithm from a reputed author.
+  """
+
+  name='PSO_OBL'
+  description='Particle Swarm Optimization (PSO) algorithm with the Opposition-Based Learning strategy'
+
+  obl_iteration_threshold=80  #number of iterations without improvement to trigger OBL
+  obl_randomness=0.1          #randomness to aply
+  obl_probability=0.5         #probability of a coordinate to be flipped by the OBL
+
+  def __init__(self,*args,**kwargs):
+    s=self
+    kwargs2=kwargs.copy()
+    if('obl_iteration_threshold' in kwargs2.keys()):
+      s.obl_iteration_threshold=kwargs2.pop('obl_iteration_threshold')
+    if('obl_randomness' in kwargs2.keys()):
+      s.obl_randomness=kwargs2.pop('obl_randomness')
+    if('obl_probability' in kwargs2.keys()):
+      s.obl_probability=kwargs2.pop('obl_probability')
+
+    s._count_for_obl=0
+    #init in the superclass:
+    PSO.__init__(self,*args,**kwargs2)
+
+  def iterate_one(self):
+    s=self
+    old_best=s._besty
+    PSO.iterate_one(self)
+    new_best=s._besty
+    if(new_best>=old_best):
+      s._count_for_obl+=1
+    if(s._count_for_obl>=s.obl_iteration_threshold):
+      ### do Opposition-Based Learning ###
+      bestidx=np.argmin(s._Y)
+      invert=(np.random.rand(*(s._X.shape))<s.obl_probability)
+      #preserve the best individual:
+      invert[bestidx,:]=False
+      #calculate noise:
+      noise=s.obl_randomness*(s.ub-s.lb)*(np.random.rand(*(s._X.shape))-0.5) #scale noise according to the search limits
+      #mirror X coordinates:
+      #-x is  (lb+ub)/2 - (x-(lb+ub)/2) which equals lb+ub-x to mirror x about the center of the search limits
+      minusX=((s.ub + s.lb) - s._X)
+      s._X=(1-invert)*s._X + invert*(minusX + noise)
+      #checking bounds:
+      s._X=np.minimum(s.ub,s._X)
+      s._X=np.maximum(s.lb,s._X)
+      #updating costs:
+
+      s._Y=s.costfunction(s._X)
+
+      aux=np.where(s._Y<s._Ymemory)
+      s._Xmemory[aux]=s._X[aux].copy()           # memory of best individual solution
+      s._Ymemory[aux]=s._Y[aux].copy()           # memory of best individual fitness
+      s._bestidx=np.argmin(s._Ymemory)           # index of best particle in Xmemory
+      s._bestx=s._Xmemory[s._bestidx].copy()  # solution of best particle in Xmemory
+      s._besty=s._Ymemory[s._bestidx]         # cost of best particle in Xmemory
+
+      s._count_for_obl=0
+      #print("Triggered OBL in PSO_OBL at iteration",s._iter)
 
 
 class FA_CP(FA):

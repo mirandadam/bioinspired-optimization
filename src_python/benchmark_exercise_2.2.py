@@ -63,7 +63,7 @@ de_cp.update(cp_parameters)
 arg_dict=dict(FA_OBL=fa_obl, DE_OBL=de_obl, FA_CP=fa_cp, DE_CP=de_cp)
 
 ## calculating the raw data: ##
-#'''
+'''
 results=[]
 t0=time()
 for i in dimensions:
@@ -120,7 +120,7 @@ for t in range(len(tables)):
   #print('Table '+str(t+1)+'. Convergency of the '+tables[t][1]+' algorithm applied to the '+tables[t][0]+' function.')
   print(r'\begin{table*}[h]')
   print(r' \centering')
-  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1]+r'}} aplicado à função \textit{'+tables[t][0]+r'}. Valores da função custo após 1000 iterações e '+str(number_of_repetitions)+' repetições.}')
+  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1].replace('_','\_')+r'}} aplicado à função \textit{'+tables[t][0].replace('_','\_')+r'}. Valores da função custo após 1000 iterações e '+str(number_of_repetitions)+' repetições.}')
   print(r' \begin{tabular}{llccccr}')
   print(r'  \toprule')
   print(r'   & & média & mediana & mínimo & desvio padrão & taxa de sucesso (\%) \\')
@@ -146,7 +146,7 @@ for t in range(len(tables)):
 
   print(r'\begin{table*}[h]')
   print(r' \centering')
-  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1]+r'}} aplicado à função \textit{'+tables[t][0]+r'}. Comparação das melhores soluções encontradas com o mínimo teórico utilizando 1000 iterações e '+str(number_of_repetitions)+' repetições.}')
+  print(r' \caption{Algoritmo \textit{\textbf{'+tables[t][1].replace('_','\_')+r'}} aplicado à função \textit{'+tables[t][0].replace('_','\_')+r'}. Comparação das melhores soluções encontradas com o mínimo teórico utilizando 1000 iterações e '+str(number_of_repetitions)+' repetições.}')
   print(r' \begin{tabular}{llll}')
   print(r'  \toprule')
   print(r'  tipo & dimensoes & custo & solução correspondente\\')
