@@ -248,10 +248,44 @@ print(r"""\bottomrule
  \end{tabular}
 \end{table*}""")
 
+from scipy.stats import ks_2samp
+from scipy.stats import kstest
+from scipy.stats import kruskal
+from scipy.stats import ranksums
 
-n=np.array([i[2] for i in results]).argmin()
-x=results[n][3].copy()
-res=minimize(cost_function,x.copy(),method='L-BFGS-B',bounds=bounds.tolist(),options={'maxiter':500})
+distributions={}
+
+for a in ['PSO','PSO_OBL','DE','DE_OBL']:
+  r=np.array([i[2] for i in results if i[0]==a])
+  distributions[a]=r.copy()
+  m=np.mean(r)
+  s=np.std(r)
+  print(a,kstest((r-m)/s,'norm'))
+  print(r)
+  md=np.median(r)
+  min_cost=np.min(r)
+  max_cost=np.max(r)
+
+list(distributions.values())
+a=[distributions[i] for i in ['PSO','PSO_OBL','DE','DE_OBL']]
+print(kruskal(*a))
+print(kruskal(a[0],a[1]))
+print(kruskal(a[0],a[2]))
+print(kruskal(a[0],a[3]))
+print(kruskal(a[1],a[2]))
+print(kruskal(a[1],a[3]))
+print(kruskal(a[2],a[3]))
+
+print('ranksums')
+print(ranksums(a[0],a[1]))
+print(ranksums(a[0],a[2]))
+print(ranksums(a[0],a[3]))
+print(ranksums(a[1],a[2]))
+print(ranksums(a[1],a[3]))
+print(ranksums(a[2],a[3]))
+#n=np.array([i[2] for i in results]).argmin()
+#x=results[n][3].copy()
+#res=minimize(cost_function,x.copy(),method='L-BFGS-B',bounds=bounds.tolist(),options={'maxiter':500})
 '''
 print(results[n])
 print()
