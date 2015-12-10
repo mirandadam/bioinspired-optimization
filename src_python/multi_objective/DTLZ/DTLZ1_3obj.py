@@ -18,6 +18,8 @@ def fit(var):
   return r
 
 
+  
+
 fname=__file__.rsplit('.py',1)[0]+'.txt'
 print('loading',fname)
 pareto_front=np.loadtxt(fname,delimiter='\t',usecols=(0,1,2))

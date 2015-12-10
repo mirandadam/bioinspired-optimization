@@ -8,7 +8,7 @@ number_of_objectives=3
 def fit(var):
   assert(len(var.shape)==2) #assert that the input has two dimensions
   population_size,n=var.shape #population size, number of dimensions
-  g=np.sum((var[:,2:]-0.5)**2)
+  g=np.sum((var[:,2:]-0.5)**2,axis=1)
   r=np.zeros((population_size,3))
   r[:,0]= (1+g) * np.cos(var[:,0]*np.pi/2) * np.cos(var[:,1]*np.pi/2)
   r[:,1]= (1+g) * np.cos(var[:,0]*np.pi/2) * np.sin(var[:,1]*np.pi/2)

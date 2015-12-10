@@ -49,7 +49,7 @@ def truncate(Y,N):
 
   #compute rank:
   rank=nonDominatedRank(Y)
-  print(np.bincount(rank))
+  #print(np.bincount(rank)) #this line is for debugging. It shows how many individuals are in each rank.
   #compute crowding factor:
   cf=computecf(Y,rank)
 
@@ -174,3 +174,21 @@ class MODE:
         s._iter+=1
     return (s._Y,s._X)
 
+#inter generational distance performance - average distance to the pareto front:
+def igd_performance(fitness_tuples,pareto_front):
+  aux=0
+  for i in fitness_tuples:
+    aux+=np.min(((pareto_front-i)**2).sum(axis=1))**0.5
+  return aux/len(fitness_tuples)
+
+#measure of how spread the fitness functions are.
+#this is the standard deviation of the euclidean distance of each fitness tuple to the nearest one
+def spacing_performance(fitness_tuples):
+  di=np.zeros(len(fitness_tuples))
+  mx=np.max(fitness_tuples)-np.min(fitness_tuples)
+  mx=mx*np.sqrt(fitness_tuples.shape[1]) #mx is the maximum possible distance in this set
+  for i in range(len(fitness_tuples)):
+    temp=np.sum((fitness_tuples-fitness_tuples[i])**2,axis=1)**0.5
+    temp[i]=mx
+    di[i]=np.min(temp)
+  return np.std(di) #standard deviation
