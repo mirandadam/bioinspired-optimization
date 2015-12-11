@@ -3,6 +3,7 @@
 
 import numpy as np
 import mode
+import base
 import sys
 import time
 sys.path.append('./ZDT')
@@ -46,11 +47,12 @@ for t in test_set:
     for i in range(maxiter):
       m.iterate_one()
       #print(i)
-      spacing= mode.spacing_performance(m._Y)
-      igd=     mode.igd_performance(m._Y,pareto_front)
+      spacing= base.spacing_performance(m._Y)
+      igd=     base.igd_performance(m._Y,pareto_front)
       s=[t['name'],n,i,spacing,igd]
       samples.append(s)
       print(s)
+
 
 import pickle
 f=open('samples_'+str(time.time())+'.pickle','wb')

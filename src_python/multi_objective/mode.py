@@ -3,100 +3,23 @@
 
 import numpy as np
 
-def nonDominatedRank(Y):
-  population_size=len(Y)
-  rank=np.zeros(population_size,'int')
-  number_of_classes=0
-  domination_matrix=np.zeros((population_size,population_size),dtype='bool')
-  #calculating domination matrix:
-  for i in range(population_size):
-    for j in range(population_size):
-      domination_matrix[i,j]=(Y[i]<Y[j]).any()*(Y[i]<=Y[j]).all()
-      #domination_matrix[i,j] will answer the question: does element i dominate element j?
-  non_dominated=1-np.any(domination_matrix,axis=0)
-  aux=np.where(non_dominated)[0]
-  while np.any(non_dominated):
-    number_of_classes+=1
-    rank[aux]=number_of_classes
-    for i in aux:
-      domination_matrix[i,:]=0 #update these to dominate no other
-      domination_matrix[i,i]=1 #update the element to be dominated by itself
-    non_dominated=1-np.any(domination_matrix,axis=0)
-    aux=np.where(non_dominated)[0]
-  return rank
-
-def computecf(Y,rank=None):
-  population_size, number_of_dimensions = Y.shape
-  cf=np.zeros(population_size)
-  if rank is None:
-    rank=nonDominatedRank(Y)
-  for r in range(1,rank.max()+1):
-    indices=np.where(rank==r)[0]
-    for d in range(number_of_dimensions):
-      sorted_indices=indices[np.argsort(Y[indices,d])]
-      cf[sorted_indices[0]]=np.inf #the crowding distance of the extremes is infinity
-      cf[sorted_indices[-1]]=np.inf #the crowding distance of the extremes is infinity
-      dimension_range=Y[sorted_indices[-1],d]-Y[sorted_indices[0],d]
-      dimension_range=max(1e-6,dimension_range)#avoid dividing by zero in case there is no variance in the dimension
-      cf[sorted_indices[1:-1]]+=(Y[sorted_indices[2:],d]-Y[sorted_indices[:-2],d])/dimension_range
-  return cf.copy()
-
-def truncate(Y,N):
-  #steps:
-  #1.order solutions in Y by rank
-  #2.within each rank, order solutions by descending crowding factor (cf)
-  #3.truncate the resulting solution vector to exactly N elements
-
-  #compute rank:
-  rank=nonDominatedRank(Y)
-  #print(np.bincount(rank)) #this line is for debugging. It shows how many individuals are in each rank.
-  #compute crowding factor:
-  cf=computecf(Y,rank)
-
-  #sort rank, and within each rank sort by descending crowding factor (cf)
-  aux=np.lexsort((-cf,rank))
-  # the syntax of the lexsort command is confusing. If in doubt, please make
-  # the following test:
-  #  aux=np.lexsort((-cf,rank))
-  #  p=np.array([rank,cf]).transpose()
-  #  print(p[aux]) #correct result
-  # then try:
-  #  aux=np.lexsort((rank,-cf)) #switched parameters
-  #  p=np.array([rank,cf]).transpose()
-  #  print(p[aux]) #incorrect result
-
-  #truncate the sorted indices to contain N elements:
-  aux=aux[:N]
-  #return the N "best" solutions in Y according to rank and cf.
-  #also return the rank of each solution and the corresponding crowding factor
-  return [Y[aux].copy(),rank[aux].copy(),cf[aux].copy(),aux.copy()]
+import base
 
 class MODE:
-  #function OUT=MODE(MODEDat)
-  # Reading parameters from MODEDat
-  #Generaciones  = MODEDat.MAXGEN;    % Maximum number of generations.
-  #Xpop          = MODEDat.XPOP;      % Population size.
-  #Nvar          = MODEDat.NVAR;      % Number of decision variables.
-  #Nobj          = MODEDat.NOBJ;      % Number of objectives.
-  #Bounds        = MODEDat.FieldD;    % Optimization bounds.
-  #Initial       = MODEDat.Initial;   % Initialization bounds.
-  #ScalingFactor = MODEDat.Esc;       % Scaling fator in DE algorithm.
-  #CrossOverP    = MODEDat.Pm;        % Crossover probability in DE algorithm.
-  #mop           = MODEDat.mop;       % Cost function.
 
   def __init__(self,cost_function,n_dimensions,n_objectives,lb,ub,maxiter=500,
                population_size=80,scaling_factor=0.5,crossover_probability=0.2,mutation_probability=1.0):
     s=self
     s.cost_function=cost_function
-    s.n_dimensions=n_dimensions
-    s.n_objectives=n_objectives
-    s.lb=lb.copy()
-    s.ub=ub.copy()
+    s.n_dimensions=n_dimensions #number of decision variables
+    s.n_objectives=n_objectives #number of objectives
+    s.lb=lb.copy() #lower search space bounds
+    s.ub=ub.copy() #uppser search space bounds
     s.maxiter=maxiter
     s.population_size=population_size
-    s.scaling_factor=scaling_factor
-    s.crossover_probability=crossover_probability
-    s.mutation_probability=mutation_probability
+    s.scaling_factor=scaling_factor #Scaling factor of the DE algorithm
+    s.crossover_probability=crossover_probability #crossover probability of the DE algorithm
+    s.mutation_probability=mutation_probability #this is mentioned in the article (TODO: cite), but was not present in the DE code studied so far
 
     #initial conditions:
     s._X = np.random.random((population_size,n_dimensions))*(ub-lb)+lb # current individuals
@@ -153,7 +76,7 @@ class MODE:
     new_population=np.concatenate((parents,children),axis=0)
     new_Y=s.cost_function(new_population)
 
-    truncated_Y,rank,cf,indices=truncate(new_Y,s.population_size)
+    truncated_Y,rank,cf,indices=base.truncate(new_Y,s.population_size)
 
     s._X=new_population[indices].copy()
     s._Y=truncated_Y.copy()
@@ -173,22 +96,3 @@ class MODE:
       if(s._iter==i):
         s._iter+=1
     return (s._Y,s._X)
-
-#inter generational distance performance - average distance to the pareto front:
-def igd_performance(fitness_tuples,pareto_front):
-  aux=0
-  for i in fitness_tuples:
-    aux+=np.min(((pareto_front-i)**2).sum(axis=1))**0.5
-  return aux/len(fitness_tuples)
-
-#measure of how spread the fitness functions are.
-#this is the standard deviation of the euclidean distance of each fitness tuple to the nearest one
-def spacing_performance(fitness_tuples):
-  di=np.zeros(len(fitness_tuples))
-  mx=np.max(fitness_tuples)-np.min(fitness_tuples)
-  mx=mx*np.sqrt(fitness_tuples.shape[1]) #mx is the maximum possible distance in this set
-  for i in range(len(fitness_tuples)):
-    temp=np.sum((fitness_tuples-fitness_tuples[i])**2,axis=1)**0.5
-    temp[i]=mx
-    di[i]=np.min(temp)
-  return np.std(di) #standard deviation
