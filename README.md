@@ -8,6 +8,7 @@ As of november/2015 this code is still being heavily modified. It provides basic
 It still lacks external review and references to the original papers that proposed the algorithms and the fitness functions.
 
 Language: Python
+
 Requirements:
   Python 3+
   NumPy
