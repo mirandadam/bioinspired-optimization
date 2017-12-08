@@ -29,6 +29,7 @@ class FitnessFunction:
       they do not use the "self" key word in the arguments.
       they do not access object attributes.
     """
+    @staticmethod
     @abc.abstractmethod
     def evaluate(X):
         """
@@ -39,6 +40,7 @@ class FitnessFunction:
         """
         return
 
+    @staticmethod
     @abc.abstractmethod
     def evaluate_single(x):
         """
@@ -48,6 +50,7 @@ class FitnessFunction:
         """
         return
 
+    @staticmethod
     @abc.abstractmethod
     def default_minimum(ndim):
         """
@@ -63,6 +66,7 @@ class FitnessFunction:
         """
         return
 
+    @staticmethod
     @abc.abstractmethod
     def default_bounds(ndim):
         """
@@ -79,17 +83,21 @@ class FitnessFunction:
 class Sphere(FitnessFunction):
     name = 'Sphere'
 
+    @staticmethod
     def evaluate(X):
-        m, n = X.shape
+        #m, n = X.shape
         return np.sum(X * X, axis=1)
 
+    @staticmethod
     def evaluate_single(x):
-        n, = x.shape
+        #n, = x.shape
         return np.sum(x * x)
 
+    @staticmethod
     def default_minimum(ndim):
         return (0., np.zeros(ndim))
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 8., np.zeros(ndim) + 8)
 
@@ -97,18 +105,22 @@ class Sphere(FitnessFunction):
 class Quadric(FitnessFunction):
     name = 'Quadric'
 
+    @staticmethod
     def evaluate(X):
         m, n = X.shape
         temp = [np.sum(X[:, :i + 1], axis=1)**2 for i in range(n)]
         return np.sum(temp, axis=0)
 
+    @staticmethod
     def evaluate_single(x):
         n, = x.shape
         return np.sum([np.sum(x[:i + 1])**2 for i in range(n)])
 
+    @staticmethod
     def default_minimum(ndim):
         return (0., np.zeros(ndim))
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 8., np.zeros(ndim) + 8)
 
@@ -116,18 +128,22 @@ class Quadric(FitnessFunction):
 class Rastrigin(FitnessFunction):
     name = 'Rastrigin'
 
+    @staticmethod
     def evaluate(X):
-        m, n = X.shape
+        #m, n = X.shape
         temp = X**2 - 10 * np.cos(2 * np.pi * X) + 10
         return np.sum(temp, axis=1)
 
+    @staticmethod
     def evaluate_single(x):
-        n, = x.shape
+        #n, = x.shape
         return np.sum(x**2 - 10 * np.cos(2 * np.pi * x) + 10)
 
+    @staticmethod
     def default_minimum(ndim):
         return (0., np.zeros(ndim))
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 8., np.zeros(ndim) + 8)
 
@@ -136,20 +152,24 @@ class Rosenbrock(FitnessFunction):
     """ https://en.wikipedia.org/wiki/Rosenbrock_function """
     name = 'Rosenbrock'
 
+    @staticmethod
     def evaluate(X):
         m, n = X.shape
-        assert(n % 2 == 0)
+        assert n % 2 == 0
         temp = [100 * (X[:, 2 * i] - X[:, 2 * i - 1]**2)**2 + (1 - X[:, 2 * i - 1])**2 for i in range(int(n / 2))]
         return np.sum(temp, axis=0)
 
+    @staticmethod
     def evaluate_single(x):
         n, = x.shape
-        assert(n % 2 == 0)
+        assert n % 2 == 0
         return np.sum([100 * (x[2 * i] - x[2 * i - 1]**2)**2 + (1 - x[2 * i - 1])**2 for i in range(int(n / 2))])
 
+    @staticmethod
     def default_minimum(ndim):
         return (0., np.ones(ndim))
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 8., np.zeros(ndim) + 8)
 
@@ -161,6 +181,7 @@ class Schwefel(FitnessFunction):
     """
     name = 'Schwefel'
 
+    @staticmethod
     def evaluate(X):
         m, n = X.shape
         temp = X * np.sin(np.abs(X)**0.5)
@@ -169,6 +190,7 @@ class Schwefel(FitnessFunction):
         # tuned numbers to approach a zero minimum. average error for n in range(100) is about 2e-10
         return 418.98288727224343 * n - np.sum(temp, axis=1)
 
+    @staticmethod
     def evaluate_single(x):
         n, = x.shape
         # original function:
@@ -176,6 +198,7 @@ class Schwefel(FitnessFunction):
         # tuned numbers to approach a zero minimum. average error for n in range(100) is about 2e-10
         return 418.98288727224343 * n - np.sum(x * np.sin(np.abs(x)**0.5))
 
+    @staticmethod
     def default_minimum(ndim):
         # nominal result:
         # return (0., )
@@ -185,6 +208,7 @@ class Schwefel(FitnessFunction):
         res = minimize(aux, 420.9687, tol=1e-20)
         return (res.fun, np.ones(ndim) * res.x)
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 500., np.zeros(ndim) + 500)
 
@@ -192,17 +216,21 @@ class Schwefel(FitnessFunction):
 class Ackley(FitnessFunction):
     name = 'Ackley'
 
+    @staticmethod
     def evaluate(X):
         m, n = X.shape
         return -20 * (np.exp(-0.2 * ((1 / n) * np.sum(X * X, axis=1))**0.5)) - np.exp((1 / n) * np.sum(np.cos(2 * np.pi * X), axis=1)) + 20 + np.e
 
+    @staticmethod
     def evaluate_single(x):
         n, = x.shape
         return -20 * (np.exp(-0.2 * ((1 / n) * np.sum(x * x))**0.5)) - np.exp((1 / n) * np.sum([np.cos(2 * np.pi * xi) for xi in x])) + 20 + np.e
 
+    @staticmethod
     def default_minimum(ndim):
         return (0., np.zeros(ndim))
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 32., np.zeros(ndim) + 32)
 
@@ -210,6 +238,7 @@ class Ackley(FitnessFunction):
 class Michalewicz(FitnessFunction):
     name = 'Michalewicz'
 
+    @staticmethod
     def evaluate(X):
         m, n = X.shape
         m_number = 10
@@ -217,11 +246,13 @@ class Michalewicz(FitnessFunction):
         temp = [np.sin(X[:, i]) * np.sin((i + 1) * (X[:, i]**2) / np.pi)**(2 * m_number) for i in range(n)]
         return -np.sum(temp, axis=0)
 
+    @staticmethod
     def evaluate_single(x):
-        n, = x.shape
+        #n, = x.shape
         m_number = 10
         return -np.sum([np.sin(x[i]) * np.sin((i + 1) * (x[i]**2) / np.pi)**(2 * m_number) for i in range(len(x))])
 
+    @staticmethod
     def default_minimum(ndim):
         """
         Guess for the Michalewicz function global minimum.
@@ -233,7 +264,7 @@ class Michalewicz(FitnessFunction):
          dimensions, but I have not been able to prove this always reaches the
          actual global minimum.
         """
-        assert(ndim > 0)
+        assert ndim > 0
         e = Michalewicz.evaluate
         e_s = Michalewicz.evaluate_single
         lb, ub = Michalewicz.default_bounds(ndim)
@@ -247,6 +278,7 @@ class Michalewicz(FitnessFunction):
         res = minimize(e_s, x0[0], tol=1e-20)
         return (res.fun, res.x)
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim), np.ones(ndim) * np.pi)
 
@@ -254,6 +286,7 @@ class Michalewicz(FitnessFunction):
 class RotatedHyperEllipsoid(FitnessFunction):
     name = 'RotatedHyperEllipsoid'
 
+    @staticmethod
     def evaluate(X):
         m, n = X.shape
         # original version:
@@ -261,6 +294,7 @@ class RotatedHyperEllipsoid(FitnessFunction):
         # faster version:
         return ((X**2) * np.arange(n, 0, -1)).sum(axis=1)
 
+    @staticmethod
     def evaluate_single(x):
         n, = x.shape
         # original vesion:
@@ -268,9 +302,11 @@ class RotatedHyperEllipsoid(FitnessFunction):
         # faster vesion:
         return ((x**2) * np.arange(n, 0, -1)).sum()
 
+    @staticmethod
     def default_minimum(ndim):
         return (0., np.zeros(ndim))
 
+    @staticmethod
     def default_bounds(ndim):
         return (np.zeros(ndim) - 65.536, np.zeros(ndim) + 65.536)
 
@@ -288,19 +324,19 @@ def test(c, dims, nsamples, tol):
     Also tests if there is any numeric problem evaluating with many dimensions.
 
     """
-    assert(hasattr(c, 'evaluate'))
-    assert(hasattr(c, 'evaluate_single'))
-    assert(hasattr(c, 'default_bounds'))
-    assert(hasattr(c, 'default_minimum'))
-    assert(hasattr(c, 'name'))
+    assert hasattr(c, 'evaluate')
+    assert hasattr(c, 'evaluate_single')
+    assert hasattr(c, 'default_bounds')
+    assert hasattr(c, 'default_minimum')
+    assert hasattr(c, 'name')
     # TODO: test if name is the same as the class name. Use it to report results
     t = time()
     for n in dims:
         # checking for sanity in the number of dimensions:
-        assert(n > 0)  # is the number of dimensions greater than zero?
-        assert(n == int(n))  # is the number of dimensions an integer?
+        assert n > 0  # is the number of dimensions greater than zero?
+        assert n == int(n)  # is the number of dimensions an integer?
         # print a diagnostic if last diagnostic was more than 5 seconds ago.
-        if(time() - t > 5):
+        if time() - t > 5:
 
             print(' n=' + str(n), 'dimensions...')
             t = time()
@@ -308,11 +344,11 @@ def test(c, dims, nsamples, tol):
         ymin, xmin = c.default_minimum(n)
         lb, ub = c.default_bounds(n)
         # is the provided default minimum within the default bounds?
-        assert ((xmin >= lb).all())
-        assert ((xmin <= ub).all())
+        assert (xmin >= lb).all()
+        assert (xmin <= ub).all()
         # does the provided default minimum evaluate to the solution (both matrix and single versions)?
-        assert (abs(c.evaluate_single(xmin) - ymin) < tol)  # test with a tolerance of
-        assert (abs(c.evaluate(xmin.reshape(1, -1)) - ymin) < tol)  # test with a tolerance
+        assert abs(c.evaluate_single(xmin) - ymin) < tol  # test with a tolerance of
+        assert abs(c.evaluate(xmin.reshape(1, -1)) - ymin) < tol  # test with a tolerance
         # generate a random test vector between the bounds:
         X = (np.random.random((nsamples, n)) - lb) * (ub - lb)  # random vector with nsamples values
         # do the single evaluation and the matrix evaluation match?
@@ -327,22 +363,22 @@ def test(c, dims, nsamples, tol):
       print( np.abs(se[offending]- me[offending]))
     assert ((np.abs(se-me)<tol).all())
     '''
-        assert ((se == me).all())
+        assert (se == me).all()
 
         # do all the evaluations above produce larger values than the provided minimum?
-        assert((me >= ymin).all())
+        assert (me >= ymin).all()
         # is the provided global minimum really minimum?
         res = minimize(c.evaluate_single, xmin, method='L-BFGS-B', bounds=(np.array([lb, ub]).transpose()))  # test the built in scipy optimizer at the provided minimum
-        if(res.fun < ymin - tol):
+        if res.fun < ymin - tol:
             print('better solution found:', res.fun, res.x)
             print(' old solution:', ymin, xmin)
-        assert(res.fun >= ymin - tol)
+        assert res.fun >= ymin - tol
         for x in X:
             res = minimize(c.evaluate_single, x, method='L-BFGS-B', bounds=(np.array([lb, ub]).transpose()))  # test the built in scipy optimizer at the random points
-            if(res.fun < ymin - tol):
+            if res.fun < ymin - tol:
                 print('better solution found:', res.fun, res.x)
                 print(' old solution:', ymin, xmin)
-            assert(res.fun >= ymin - tol)
+            assert res.fun >= ymin - tol
     return True
 
 
@@ -355,13 +391,13 @@ all_functions = {i[0]: i[1] for i in vars().copy().items() if
 
 
 def test_all():
-    """ Test for all FitnessFunction classes except the FitnessFunction classe. """
+    """ Test for all FitnessFunction classes except the FitnessFunction class. """
     v = all_functions.copy()
     for i in v.keys():
         maxdim = 10
         nsamples = 100
         print('Testing', i, 'with dimensions up to ', maxdim, ' and', nsamples, 'random samples.')
-        if(i == 'Rosenbrock'):
+        if i == 'Rosenbrock':
             dims = range(2, maxdim + 1, 2)  # rosenbrock only accepts even dimensions
         else:
             dims = range(1, maxdim + 1)

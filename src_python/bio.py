@@ -17,31 +17,28 @@
 
 import numpy as np
 import fitnessfunctions  # needed for testing.
+#import abc
 
 # TODO: cite the references to the algorithms.
 # TODO: have somebody else review this code.
 
 
 class Optimizer:
-    """
-    ## These variables are commented out on purpose to generate errors
-    ##  in case they are used before being initialized.
-    #problem variables:
-    costfunction=None      #the cost function to evaluate
-    dimensions=None        #number of dimensions
-    maxiter=500            #maximum number of iterations
-    target_cost=None       #stopping criterion for cost
-    lb=None                #range domain for fitness function - lower bound for each dimension
-    ub=None                #range domain for fitness function - upper bound for each dimension
+    # problem variables:
+    costfunction = None  # the cost function to evaluate
+    dimensions = None  # number of dimensions
+    maxiter = 500  # maximum number of iterations
+    target_cost = None  # stopping criterion for cost
+    lb = None  # range domain for fitness function - lower bound for each dimension
+    ub = None  # range domain for fitness function - upper bound for each dimension
 
-    #state variables:
-    _X=None       #current particle solutions
-    _Y=None       #current particle cost
-    _bestidx=None #index of best particle in X
-    _bestx=None   #solution of best particle in X
-    _besty=None   #cost of best particle in X
-    _iter=None    #current iteration
-    """
+    # state variables:
+    _X = None  # current particle solutions
+    _Y = None  # current particle cost
+    _bestidx = None  # index of best particle in X
+    _bestx = None  # solution of best particle in X
+    _besty = None  # cost of best particle in X
+    _iter = None  # current iteration
 
     def run(self):
         """
@@ -50,11 +47,11 @@ class Optimizer:
         """
         s = self
         while(s._iter < s.maxiter and
-              (s.target_cost is None or s._ybest > s.target_cost)):
+              (s.target_cost is None or s._besty > s.target_cost)):
             i = s._iter
             s.iterate_one()
             # protect against s.iterate_one incrementing the s._iter counter:
-            if(s._iter == i):
+            if s._iter == i:
                 s._iter += 1
         return (s._besty, s._bestx)
 
@@ -69,15 +66,20 @@ class Optimizer:
         x_history = []
         y_history = []
         while(s._iter < s.maxiter and
-              (s.target_cost is None or s._ybest > s.target_cost)):
+              (s.target_cost is None or s._besty > s.target_cost)):
             i = s._iter
             s.iterate_one()
             x_history.append(s._bestx)
             y_history.append(s._besty)
             # protect against s.iterate_one incrementing the s._iter counter:
-            if(s._iter == i):
+            if s._iter == i:
                 s._iter += 1
         return (y_history, x_history)
+    '''
+    @abc.abstractmethod
+    def iterate_one(self):
+        return
+    '''
 
 
 class PSO(Optimizer):
@@ -273,7 +275,7 @@ class ABC(Optimizer):
 
         # The best food source is identified
         s._bestidx = np.argmin(s._Y)
-        if(s._Y[s._bestidx] < s._besty):
+        if s._Y[s._bestidx] < s._besty:
             # record only the best food source ever, even though there may be no more bees on it
             # this may depart from the original algorithm.
             # TODO: check the paper!
@@ -284,7 +286,7 @@ class ABC(Optimizer):
         # determine the food sources whose trial counter exceeds the "abandon_threshold" value.
         # In Basic ABC, only one scout is allowed to occur in each cycle
         aux = np.argmax(s._trials)
-        if(s._trials[aux] > s.abandon_threshold):
+        if s._trials[aux] > s.abandon_threshold:
             new_food = np.random.rand(s.dimensions) * (s.ub - s.lb) + s.lb
             new_cost = s.costfunction(np.array([new_food]))[0]
             # Since the best solution cannot be improved upon, it will eventually
@@ -294,7 +296,7 @@ class ABC(Optimizer):
             s._Y[aux] = new_cost
             s._trials[aux] = 0
             # best food source is verified again, only against the scout:
-            if(new_cost < s._besty):
+            if new_cost < s._besty:
                 s._bestidx = aux
                 s._bestx = s._X[s._bestidx].copy()
                 s._besty = s._Y[s._bestidx]
@@ -363,7 +365,7 @@ class DE(Optimizer):
 
         s = self
         n = s.n
-        assert(n > 3)  # only works with 4 or more individuals
+        assert n > 3  # only works with 4 or more individuals
 
         # getting random neighbours to permutate
         neighbours = np.array([np.random.permutation(n - 1)[:3] for i in range(n)]).transpose()
@@ -535,11 +537,11 @@ class FA_OBL(FA):
     def __init__(self, *args, **kwargs):
         s = self
         kwargs2 = kwargs.copy()
-        if('obl_iteration_threshold' in kwargs2.keys()):
+        if 'obl_iteration_threshold' in kwargs2.keys():
             s.obl_iteration_threshold = kwargs2.pop('obl_iteration_threshold')
-        if('obl_randomness' in kwargs2.keys()):
+        if 'obl_randomness' in kwargs2.keys():
             s.obl_randomness = kwargs2.pop('obl_randomness')
-        if('obl_probability' in kwargs2.keys()):
+        if 'obl_probability' in kwargs2.keys():
             s.obl_probability = kwargs2.pop('obl_probability')
 
         s._last_alpha = s.alpha0
@@ -552,11 +554,11 @@ class FA_OBL(FA):
         old_best = s._besty
         FA.iterate_one(self)
         new_best = s._besty
-        if(new_best >= old_best):
+        if new_best >= old_best:
             s._count_for_obl += 1
         else:
             s._last_alpha = s._alpha  # record the last alpha that produced an improvement
-        if(s._count_for_obl >= s.obl_iteration_threshold):
+        if s._count_for_obl >= s.obl_iteration_threshold:
             ### do Opposition-Based Learning ###
             bestidx = np.argmin(s._Y)
             invert = (np.random.rand(*(s._X.shape)) < s.obl_probability)
@@ -602,11 +604,11 @@ class DE_OBL(DE):
     def __init__(self, *args, **kwargs):
         s = self
         kwargs2 = kwargs.copy()
-        if('obl_iteration_threshold' in kwargs2.keys()):
+        if 'obl_iteration_threshold' in kwargs2.keys():
             s.obl_iteration_threshold = kwargs2.pop('obl_iteration_threshold')
-        if('obl_randomness' in kwargs2.keys()):
+        if 'obl_randomness' in kwargs2.keys():
             s.obl_randomness = kwargs2.pop('obl_randomness')
-        if('obl_probability' in kwargs2.keys()):
+        if 'obl_probability' in kwargs2.keys():
             s.obl_probability = kwargs2.pop('obl_probability')
 
         s._count_for_obl = 0
@@ -618,9 +620,9 @@ class DE_OBL(DE):
         old_best = s._besty
         DE.iterate_one(self)
         new_best = s._besty
-        if(new_best >= old_best):
+        if new_best >= old_best:
             s._count_for_obl += 1
-        if(s._count_for_obl >= s.obl_iteration_threshold):
+        if s._count_for_obl >= s.obl_iteration_threshold:
             ### do Opposition-Based Learning ###
             bestidx = np.argmin(s._Y)
             invert = (np.random.rand(*(s._X.shape)) < s.obl_probability)
@@ -662,11 +664,11 @@ class PSO_OBL(PSO):
     def __init__(self, *args, **kwargs):
         s = self
         kwargs2 = kwargs.copy()
-        if('obl_iteration_threshold' in kwargs2.keys()):
+        if 'obl_iteration_threshold' in kwargs2.keys():
             s.obl_iteration_threshold = kwargs2.pop('obl_iteration_threshold')
-        if('obl_randomness' in kwargs2.keys()):
+        if 'obl_randomness' in kwargs2.keys():
             s.obl_randomness = kwargs2.pop('obl_randomness')
-        if('obl_probability' in kwargs2.keys()):
+        if 'obl_probability' in kwargs2.keys():
             s.obl_probability = kwargs2.pop('obl_probability')
 
         s._count_for_obl = 0
@@ -678,9 +680,9 @@ class PSO_OBL(PSO):
         old_best = s._besty
         PSO.iterate_one(self)
         new_best = s._besty
-        if(new_best >= old_best):
+        if new_best >= old_best:
             s._count_for_obl += 1
-        if(s._count_for_obl >= s.obl_iteration_threshold):
+        if s._count_for_obl >= s.obl_iteration_threshold:
             ### do Opposition-Based Learning ###
             bestidx = np.argmin(s._Y)
             invert = (np.random.rand(*(s._X.shape)) < s.obl_probability)
@@ -724,7 +726,7 @@ class FA_CP(FA):
     def __init__(self, *args, **kwargs):
         s = self
         kwargs2 = kwargs.copy()
-        if('cp_confidence_in_second' in kwargs2.keys()):
+        if 'cp_confidence_in_second' in kwargs2.keys():
             s.cp_confidence_in_second = kwargs2.pop('cp_confidence_in_second')
 
         # init in the superclass:
@@ -750,10 +752,10 @@ class FA_CP(FA):
                 # calculation of the attraction (beta) contribution:
                 beta = (s.beta0 - s.betamin) * np.exp(-s.exponent * r2) + s.betamin
                 # updating position:
-                if(i > j):  # attract to the less bright, weight by confidence
+                if i > j:  # attract to the less bright, weight by confidence
                     s._X[j] = initial_position + s.cp_confidence_in_second * beta * (position_of_brightest - initial_position) + random_part
                 # if i==j do not update the position.
-                if(i < j):  # do regular algorithm
+                if i < j:  # do regular algorithm
                     s._X[j] = initial_position + beta * (position_of_brightest - initial_position) + random_part
                 del j, random_part, initial_position, r2, beta
             del i, position_of_brightest
@@ -791,7 +793,7 @@ class DE_CP(DE):
     def __init__(self, *args, **kwargs):
         s = self
         kwargs2 = kwargs.copy()
-        if('cp_confidence_in_second' in kwargs2.keys()):
+        if 'cp_confidence_in_second' in kwargs2.keys():
             s.cp_confidence_in_second = kwargs2.pop('cp_confidence_in_second')
 
         # init in the superclass:
@@ -804,7 +806,7 @@ class DE_CP(DE):
 
         s = self
         n = s.n
-        assert(n > 3)  # only works with 4 or more individuals
+        assert n > 3  # only works with 4 or more individuals
         # getting neighbours to permutate with probabilities biased to the best fitting:
         a, b = (np.min(s._Y), np.max(s._Y))
         weight = s.cp_confidence_in_second
@@ -815,17 +817,17 @@ class DE_CP(DE):
         n0 = np.arange(n)  # self
         n1 = p.searchsorted(np.random.rand(n))  # neighbours different from self
         aux = np.where(n1 == n0)[0]
-        while(len(aux) > 0):
+        while len(aux) > 0:
             n1[aux] = p.searchsorted(np.random.rand(len(aux)))[:]
             aux = np.where(n1 == n0)[0]
         n2 = p.searchsorted(np.random.rand(n))  # neighbours different from self and n1
         aux = np.where((n2 == n1) + (n2 == n0))[0]
-        while(len(aux) > 0):
+        while len(aux) > 0:
             n2[aux] = p.searchsorted(np.random.rand(len(aux)))[:]
             aux = np.where((n2 == n1) + (n2 == n0))[0]
         n3 = p.searchsorted(np.random.rand(n))  # neighbours different from self, n1 and n2
         aux = np.where((n3 == n2) + (n3 == n1) + (n3 == n0))[0]
-        while(len(aux) > 0):
+        while len(aux) > 0:
             n3[aux] = p.searchsorted(np.random.rand(len(aux)))[:]
             aux = np.where((n3 == n2) + (n3 == n1) + (n3 == n0))[0]
         '''
