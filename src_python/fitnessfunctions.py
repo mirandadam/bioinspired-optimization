@@ -354,16 +354,14 @@ def test(c, dims, nsamples, tol):
         # do the single evaluation and the matrix evaluation match?
         se = np.array([c.evaluate_single(x) for x in X])  # single evaluation
         me = c.evaluate(X)  # matrix evaluation
-        '''
-    #DEBUG:
-    if not ((np.abs(se-me)<tol).all()):
-      offending=np.where(np.abs(se-me)>=tol)
-      print( se[offending])
-      print( me[offending])
-      print( np.abs(se[offending]- me[offending]))
-    assert ((np.abs(se-me)<tol).all())
-    '''
-        assert (se == me).all()
+        # DEBUG:
+        if not (np.abs(se - me) < tol).all():
+            offending = np.where(np.abs(se - me) >= tol)
+            print(se[offending])
+            print(me[offending])
+            print(np.abs(se[offending] - me[offending]))
+        assert (np.abs(se - me) < tol).all()
+        #assert (se == me).all()
 
         # do all the evaluations above produce larger values than the provided minimum?
         assert (me >= ymin).all()
@@ -401,7 +399,7 @@ def test_all():
             dims = range(2, maxdim + 1, 2)  # rosenbrock only accepts even dimensions
         else:
             dims = range(1, maxdim + 1)
-        test(v[i], dims, nsamples, 1e-9)  # test with a tolerance of 1e-9
+        test(v[i], dims, nsamples, 2e-9)  # test with a tolerance of 2e-9
         print(' ', i, 'passed test.')
         plot2dprofile(v[i])
         sleep(2)
@@ -428,6 +426,7 @@ def plot2dprofile(c, nsamples=101):
     # zmax=np.max(Z)
     ax.plot_surface(X, Y, Z, cmap=cm.jet, linewidth=0, rstride=1, cstride=1, antialiased=True)
     ax.contour(X, Y, Z, zdir='z', offset=zmin, cmap=cm.coolwarm)
+
 
 # plot2dprofile(Michalewicz)
 # plot2dprofile(RotatedHyperEllipsoid,201)
