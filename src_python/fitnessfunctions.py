@@ -311,7 +311,7 @@ class RotatedHyperEllipsoid(FitnessFunction):
         return (np.zeros(ndim) - 65.536, np.zeros(ndim) + 65.536)
 
 
-def test(c, dims, nsamples, tol):
+def test(c, dims, nsamples, rtol=1e-05, atol=1e-08):
     """
     Test a subclass of FitnessFunction.
 
@@ -347,36 +347,35 @@ def test(c, dims, nsamples, tol):
         assert (xmin >= lb).all()
         assert (xmin <= ub).all()
         # does the provided default minimum evaluate to the solution (both matrix and single versions)?
-        assert abs(c.evaluate_single(xmin) - ymin) < tol  # test with a tolerance of
-        assert abs(c.evaluate(xmin.reshape(1, -1)) - ymin) < tol  # test with a tolerance
+        assert np.isclose(c.evaluate_single(xmin), ymin, rtol, atol)  # test with a tolerance of
+        assert np.isclose(c.evaluate(xmin.reshape(1, -1)), ymin, rtol, atol)  # test with a tolerance
         # generate a random test vector between the bounds:
         X = (np.random.random((nsamples, n)) - lb) * (ub - lb)  # random vector with nsamples values
         # do the single evaluation and the matrix evaluation match?
         se = np.array([c.evaluate_single(x) for x in X])  # single evaluation
         me = c.evaluate(X)  # matrix evaluation
         # DEBUG:
-        if not (np.abs(se - me) < tol).all():
-            offending = np.where(np.abs(se - me) >= tol)
+        if not np.allclose(se, me):
+            offending = np.where(not np.isclose(se, me))
             print(se[offending])
             print(me[offending])
             print(np.abs(se[offending] - me[offending]))
-        assert (np.abs(se - me) < tol).all()
-        #assert (se == me).all()
+        assert np.allclose(se, me, rtol, atol)
 
         # do all the evaluations above produce larger values than the provided minimum?
         assert (me >= ymin).all()
         # is the provided global minimum really minimum?
         res = minimize(c.evaluate_single, xmin, method='L-BFGS-B', bounds=(np.array([lb, ub]).transpose()))  # test the built in scipy optimizer at the provided minimum
-        if res.fun < ymin - tol:
+        if res.fun < ymin - atol:
             print('better solution found:', res.fun, res.x)
             print(' old solution:', ymin, xmin)
-        assert res.fun >= ymin - tol
+        assert res.fun >= ymin - atol
         for x in X:
             res = minimize(c.evaluate_single, x, method='L-BFGS-B', bounds=(np.array([lb, ub]).transpose()))  # test the built in scipy optimizer at the random points
-            if res.fun < ymin - tol:
+            if res.fun < ymin - atol:
                 print('better solution found:', res.fun, res.x)
                 print(' old solution:', ymin, xmin)
-            assert res.fun >= ymin - tol
+            assert res.fun >= ymin - atol
     return True
 
 
@@ -399,7 +398,7 @@ def test_all():
             dims = range(2, maxdim + 1, 2)  # rosenbrock only accepts even dimensions
         else:
             dims = range(1, maxdim + 1)
-        test(v[i], dims, nsamples, 2e-9)  # test with a tolerance of 2e-9
+        test(v[i], dims, nsamples, rtol=1e-6, atol=1e-10)
         print(' ', i, 'passed test.')
         plot2dprofile(v[i])
         sleep(2)
